@@ -2,6 +2,7 @@
 
 import math
 import time
+import threading
 
 import numpy
 
@@ -13,6 +14,13 @@ from tf import transformations
 from ieee2014_controller.srv import SetEnabled, SetEnabledResponse
 
 rospy.init_node('controller')
+
+lock = threading.Lock()
+def locking_function(func):
+    def _(*args, **kwargs):
+        with lock:
+            return func(*args, **kwargs)
+    return _
 
 def send((xvel, yvel), angvel):
     pub.publish(TwistStamped(
@@ -27,6 +35,7 @@ def send((xvel, yvel), angvel):
     ))
 
 enabled = False
+@locking_function
 def set_enabled(req):
     global enabled
     enabled = req.enabled
@@ -56,12 +65,14 @@ max_angular_acc = max_angular_vel/1
 
 desired_position = numpy.array([0, 0])
 desired_yaw = 0
+@locking_function
 def got_desired_pose_msg(msg):
     global desired_position, desired_yaw
     desired_position = numpy.array([msg.pose.position.x, msg.pose.position.y])
     desired_yaw = transformations.euler_from_quaternion(xyzw_array(msg.pose.orientation))[2]
 rospy.Subscriber('desired_pose', PoseStamped, got_desired_pose_msg)
 
+@locking_function
 def got_pose(msg):
     if not enabled: return
     
