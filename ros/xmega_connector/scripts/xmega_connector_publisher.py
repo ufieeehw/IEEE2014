@@ -31,7 +31,7 @@ class XMEGAConnector(object):
 		message_len = 0
 		while True:
 			if start_char_count < 3:
-				if self._serial.read(1) is '^':
+				if self._serial.read(1) == '^':
 					start_char_count += 1
 					rospy.logdebug("Reading from XMEGA - start character received (%d of 3)", start_char_count)
 					continue
