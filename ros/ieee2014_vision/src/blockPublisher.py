@@ -51,7 +51,7 @@ class blockHandler:
 		self.enable = True #Default state
 		self.enable_service = rospy.Service('Detect_Blocks',Detect_Blocks, self.detect_enable)
 
-		self.image_sub = rospy.Subscriber('/Camera', Image, self.start_detection)
+		self.image_sub = rospy.Subscriber('/gun_camera/image_rect_color', Image, self.start_detection)
 		
 		
 		
@@ -63,7 +63,7 @@ class blockHandler:
 		
 		#Assume tilt is zerod when using blockSpotter.
 		#figure out how to read servo status correctly
-		self.pan_sub = rospy.Subscriber('/pan_controller/state', JointState, self.start_detection)
+		self.pan_sub = rospy.Subscriber('/pan_controller/state', JointState, self.setPan)
 		self.pan_pub = rospy.Publisher('/pan_controller/command', Float64)
 		self.pan_pub.publish(Float64(0.3))
 
@@ -97,7 +97,7 @@ class blockHandler:
 			print "Vision Not Active"
 			rospy.sleep(0.5)
 			return
-		print "Vision Active"
+		#print "Vision Active"
 		
 		image = None
 		try:
@@ -118,17 +118,20 @@ class blockHandler:
 				
 				#self.image_pub.send_message(image)
 		else:
-			if len(sys.argv) > 1:
-				if not '_' in sys.argv[1]:
-					image_name = sys.argv[1]
+			if self.sim=='Y':
+				if len(sys.argv) > 1:
+					if not '_' in sys.argv[1]:
+						image_name = sys.argv[1]
+					else:
+						image_name = 'frame0000'	
 				else:
-					image_name = 'frame0000'	
+					image_name = 'frame0000'
+				path =  os.path.dirname(os.path.abspath(__file__))
+				image = cv2.imread(path + '/Debug/' + image_name + '.jpg')
+				relPositions, imxy = blockSpotter.spotBlocks(image)
 			else:
-				image_name = 'frame0000'
-			path =  os.path.dirname(os.path.abspath(__file__))
-			image = cv2.imread(path + '/Debug/' + image_name + '.jpg')
-			relPositions, imxy = blockSpotter.spotBlocks(image)
-			
+									
+				relPositions, imxy = blockSpotter.spotBlocks()
 				
 		#RelPos <-> (Forward Displacement, Lateral Displacement Left Positive)
 		if relPositions == None:
