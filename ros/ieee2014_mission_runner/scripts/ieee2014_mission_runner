@@ -148,7 +148,9 @@ def main():
     @defer.inlineCallbacks
     def signalStarted():
         yield change_clip_position(1)
+        yield util.sleep(1)
         yield change_clip_position(3)
+        yield util.sleep(1)
         yield change_clip_position(1)
     
     colors = []
