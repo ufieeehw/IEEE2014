@@ -145,6 +145,11 @@ public:
     assert(dt >= 0);
     std::pair<Vector2d, double> dp_and_dtheta = drive(v, omega, dt);
     
+    if(boost::random::uniform_real_distribution<>(0, 1)(rng) < 0.1) {
+      // 10% chance robot did not, in fact, move
+      return *this;
+    }
+    
     return RobotParticle(
       position + (
           getForwardVector() * dp_and_dtheta.first(0) +
@@ -190,11 +195,12 @@ class ParticleFilter {
 public:
   ParticleFilter(ros::Time t, double course_length, double course_width) :
     t(t) {
+    Vector2d start_pos(-1.09, -0.34);
     for(unsigned int i = 0; i < N; i++) {
       particles.push_back(RobotParticle(
         Vector2d(
-          boost::random::uniform_real_distribution<>(-course_length/2, course_length/2)(rng),
-          boost::random::uniform_real_distribution<>(-course_width/2, course_width/2)(rng)),
+          boost::random::uniform_real_distribution<>(-course_length/2, start_pos(0) + (start_pos(0) - -course_length/2))(rng),
+          boost::random::uniform_real_distribution<>( -course_width/2, start_pos(1) + (start_pos(1) -  -course_width/2))(rng)),
         boost::random::uniform_real_distribution<>(-1, 1)(rng)));
     }
   }
