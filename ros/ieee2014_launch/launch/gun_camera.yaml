@@ -1,0 +1,20 @@
+image_width: 640
+image_height: 360
+camera_name: gun_camera
+camera_matrix:
+  rows: 3
+  cols: 3
+  data: [459.725799866446, 0, 313.173968583298, 0, 460.940484118348, 185.30476024954, 0, 0, 1]
+distortion_model: plumb_bob
+distortion_coefficients:
+  rows: 1
+  cols: 5
+  data: [0.0960154506977053, -0.170293168815155, -0.00154598823818752, 0.00277712775261882, 0]
+rectification_matrix:
+  rows: 3
+  cols: 3
+  data: [1, 0, 0, 0, 1, 0, 0, 0, 1]
+projection_matrix:
+  rows: 3
+  cols: 4
+  data: [462.292755126953, 0, 314.173743238696, 0, 0, 466.827423095703, 184.381978537142, 0, 0, 0, 1, 0]
