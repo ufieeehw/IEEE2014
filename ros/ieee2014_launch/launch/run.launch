@@ -12,6 +12,7 @@
         ffmpegcolorspace"/>
     </node>
     <node name="proc" pkg="image_proc" type="image_proc" respawn="true"/>
+    <node name="disable_autofocus" pkg="ieee2014_launch" type="disable_autofocus"/>
   </group>
 
   <include file="$(find xmega_connector)/launch/xmega_connector.launch"/>

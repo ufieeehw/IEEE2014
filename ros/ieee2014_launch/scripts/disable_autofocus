@@ -1,0 +1,5 @@
+#!/bin/sh
+
+sudo uvcdynctrl --set='Focus, Auto' 0
+sudo uvcdynctrl --set='Focus (Absolute)' 0
+
