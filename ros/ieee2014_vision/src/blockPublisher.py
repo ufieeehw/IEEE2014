@@ -47,9 +47,10 @@ class blockHandler:
 		##Immutable parameters
 		self.course_length = (97 - 3/4 * 2) * 0.0254 #Courtesy of Lord Voight
 		self.course_width = (49 - 3/4 * 2) * 0.0254
-		self.cameraFwd = 5 * 0.0245 #Cam v2 (not precise)
+		self.cameraFwd = 5.25 * 0.0254 #Cam v2 (not precise)
+		#self.cameraFwd = 5.25 I think this is the most accurate?
 		self.cameraLeft = 0
-		
+		self.start_pos = (-self.course_length/2 + (6*0.0254), -self.course_width/2 + ((5+5.25+0.75)*0.0254))	
 		#Variable initialized parameters
 		self.pan = 0
 		
@@ -93,8 +94,7 @@ class blockHandler:
 		self.cam.release()
 	def setPan(self,data):
 		self.pan = data.current_pos
-		
-		
+	
 		#It seems like this is in radians : CHECK
 		return
 	def newData(self, data):
@@ -108,8 +108,12 @@ class blockHandler:
 		if(ret):
 			relPositions,imxy = blockSpotter.spotBlocks(image)
 			if self.publish_images == 'Y':
-				for xy in imxy:
-					cv2.circle(image, xy,5,(200,100,50),thickness=-1)
+				for k in range(len(imxy)):
+					xy = imxy[k]
+					cv2.circle(image, xy,5,(50,220,50),thickness=-1)
+					pos = relPositions[k]
+					cv2.putText(image, str(pos[0])+ ', ' +str(pos[1]), xy, cv2.FONT_HERSHEY_PLAIN, 0.8, (0,0,255), thickness=1)
+				
 				self.image_pub.send_message(image)
 		else:
 			relPositions, imxy = blockSpotter.spotBlocks()
@@ -120,10 +124,8 @@ class blockHandler:
 			rospy.sleep(0.1) #-dbg
 			return
 
-
-
-		robotPos = (data.pose.position.x,data.pose.position.y)
-		
+		#robotPos = (data.pose.position.x,data.pose.position.y)
+		robotPos = self.start_pos
 		quaternion = (
 			data.pose.orientation.x,
 			data.pose.orientation.y,
@@ -132,8 +134,8 @@ class blockHandler:
 
 		rpy = tf.transformations.euler_from_quaternion(quaternion) #Roll, Pitch, Yaw: Radians
 		yaw = rpy[2] + self.pan #CHECK: Assuming positive left for camera PAN
-		
-		cameraPos = (robotPos[0] + (self.cameraFwd*np.cos(yaw)), robotPos[1] + (self.cameraFwd*np.sin(yaw)))
+		rospy.loginfo(yaw)	
+		#cameraPos = (robotPos[0] + (self.cameraFwd*np.cos(yaw)), robotPos[1] + (self.cameraFwd*np.sin(yaw)))
 	
 		#blockPos = np.add(robotPos,relPositions)
 
@@ -144,23 +146,28 @@ class blockHandler:
 
 
 		for pos in relPositions:
-			if pos[1] < 0:
-				continue
-			phi = np.arctan(pos[1]/pos[0])
-			L = np.linalg.norm((pos[0],pos[1]))
+		
+			phi = np.arctan(pos[1]/(pos[0]+self.cameraFwd))
+			L = np.linalg.norm(((pos[0]+self.cameraFwd),pos[1]))
 			#assert L == np.sqrt(np.square(pos[0]) + np.square(pos[1])), "Jacob, you was wrong about norms"
+			rospy.loginfo(phi)
+			#xOffset = L*np.cos(phi + yaw)
+			#yOffset = L*np.sin(phi + yaw)
 			
-			xOffset = L*np.cos(phi + yaw)
-			yOffset = L*np.sin(phi + yaw)
+			xOffset = L*np.cos(phi+yaw)
+			yOffset = L*np.sin(phi+yaw)
+			rospy.loginfo((phi,L,xOffset,yOffset))
+			#absolutePos = (cameraPos[0] + xOffset, cameraPos[1] + yOffset)
+			absolutePos = (robotPos[0] + xOffset, robotPos[1] + yOffset)
 
-			absolutePos = (cameraPos[0] + xOffset, cameraPos[1] + yOffset)
+
 			#absolutePos = (cameraPos[0] + pos[0], cameraPos[1] + pos[1])
 			
 			
 			
 			#absolutePos = transformCoordinates(pos, cameraPos, yaw + self.pan)
 			#absolutePos = transformCoordinates(cameraPos, pos, yaw + self.pan)
-			if (np.abs(absolutePos[0]) < self.course_length) and (np.abs(absolutePos[1]) < self.course_width):
+			if ((np.abs(absolutePos[0]) < self.course_length) and (np.abs(absolutePos[1]) < self.course_width)):
 				
 				absPos = Pose2D()
 				absPos.x = absolutePos[0]
