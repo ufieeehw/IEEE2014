@@ -43,8 +43,8 @@ def roll_up_left_a_quarter(x):
     return numpy.roll(numpy.roll(x, -x.shape[1]//4, 1), -x.shape[0]//4, 0)
 
 def _cross_correlate(signal, template):
-    return numpy.fft.ifft2(
-        numpy.fft.fft2(signal) * numpy.fft.fft2(template).conj()
+    return numpy.fft.irfft2(
+        numpy.fft.rfft2(signal) * numpy.fft.rfft2(template).conj()
     )[:signal.shape[0]//2, :signal.shape[1]//2].real
 
 def cross_correlate(signal, template, template_weight):
