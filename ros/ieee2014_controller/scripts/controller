@@ -51,8 +51,8 @@ pub = rospy.Publisher('twist', TwistStamped)
 max_linear_vel = 1
 max_linear_acc = max_linear_vel/.5
 
-max_angular_vel = 1 # actually 4
-max_angular_acc = max_angular_vel/.5
+max_angular_vel = 2 # actually 4
+max_angular_acc = max_angular_vel/1
 
 desired_position = numpy.array([0, 0])
 desired_yaw = 0
