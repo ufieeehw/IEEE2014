@@ -10,7 +10,30 @@ from std_msgs.msg import Header
 from geometry_msgs.msg import PoseStamped, Twist, Vector3, TwistStamped
 from tf import transformations
 
+from ieee2014_controller.srv import SetEnabled, SetEnabledResponse
+
 rospy.init_node('controller')
+
+def send((xvel, yvel), angvel):
+    pub.publish(TwistStamped(
+        header=Header(
+            stamp=rospy.Time.now(),
+            frame_id='/base_link',
+        ),
+        twist=Twist(
+            linear=Vector3(xvel, yvel, 0),
+            angular=Vector3(0, 0, angvel),
+        ),
+    ))
+
+enabled = False
+def set_enabled(req):
+    global enabled
+    enabled = req.enabled
+    if not enabled:
+        send((0, 0), 0)
+    return SetEnabledResponse()
+rospy.Service('~set_enabled', SetEnabled, set_enabled)
 
 xyzw_array = lambda o: numpy.array([o.x, o.y, o.z, o.w])
 def angle_diff(a, b):
@@ -40,6 +63,8 @@ def got_desired_pose_msg(msg):
 rospy.Subscriber('desired_pose', PoseStamped, got_desired_pose_msg)
 
 def got_pose(msg):
+    if not enabled: return
+    
     #desired_position = numpy.array(
     #    [+0.5, +0.25] if time.time() % 20 < 5 else
     #    [+0.5, -0.25] if time.time() % 20 < 10 else
@@ -73,16 +98,7 @@ def got_pose(msg):
     forward = numpy.array([math.cos(yaw), math.sin(yaw)])
     left = numpy.array([math.cos(yaw+math.pi/2), math.sin(yaw+math.pi/2)])
     
-    pub.publish(TwistStamped(
-        header=Header(
-            stamp=rospy.Time.now(),
-            frame_id='/base_link',
-        ),
-        twist=Twist(
-            linear=Vector3(forward.dot(desired_vel), left.dot(desired_vel), 0),
-            angular=Vector3(0, 0, desired_angvel),
-        ),
-    ))
+    send((forward.dot(desired_vel), left.dot(desired_vel)), desired_angvel)
 sim = rospy.get_param('/controller/sim', "N")
 if(sim == 'Y'):
 	rospy.loginfo("\nNOTE: controller using simulation pose data")
