@@ -171,14 +171,18 @@ def main():
                 break
     
     # XXX
-    yield set_pan_tilt(0.0, 0.0)
-    yield util.sleep(1)
-    return
+    #yield set_pan_tilt(0.0, 0.0)
+    #yield util.sleep(1)
+    #return
+    # end XXX
     
     start_pos = (-1.09, -0.34)
     end_pos = (1.06, -0.40)
     
-    # XXX wait for start
+    # XXX
+    yield go_to_point((0, start_pos[1]))
+    return
+    # end XXX
     
     yield go_to_point(start_pos + numpy.array([0.2, 0]))
     yield go_to_point(start_pos)
