@@ -180,8 +180,8 @@ def main():
     end_pos = (1.06, -0.40)
     
     # XXX
-    yield go_to_point((0, start_pos[1]))
-    return
+    #yield go_to_point((0, start_pos[1]))
+    #return
     # end XXX
     
     yield go_to_point(start_pos + numpy.array([0.2, 0]))
@@ -191,7 +191,7 @@ def main():
     
     # look for blocks, fill in block_positions
     
-    if True:
+    if False:
         detect_blocks(True)
         pan = 0.3
         for attempt in itertools.count():
