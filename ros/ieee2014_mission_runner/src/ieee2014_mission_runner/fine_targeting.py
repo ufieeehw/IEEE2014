@@ -259,7 +259,7 @@ def get(img, pos, P, debug_images=False):
     
     dest = render.make_dest(width=img.shape[1], height=img.shape[0])
     r = render.Renderer(dest, P)
-    r = r.prepend_transform(render.look_at_mat(target_center + [0, 0.02, -0.09] - pos)) # aim low to account for offset
+    r = r.prepend_transform(render.look_at_mat(target_center + [0, 0.03, -0.09] - pos)) # aim low to account for offset
     r = r.prepend_transform(transformations.translation_matrix(-pos))
     
     draw_target(r)
