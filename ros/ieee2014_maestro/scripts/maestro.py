@@ -23,7 +23,7 @@ class Controller:
     # configured to work with the default device 0x0C (or 12 in decimal).
     def __init__(self):
         # Open the command port
-        self.usb = serial.Serial('/dev/ttyACM0')
+        self.usb = serial.Serial('/dev/maestro')
         # Command lead-in and device 12 are sent for each Pololu serial commands.
         self.PololuCmd = chr(0xaa) + chr(0xc)        
 
