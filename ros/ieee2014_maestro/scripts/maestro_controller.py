@@ -20,6 +20,8 @@ class maestroController(object):
 			self.servo.setTarget(0,10000)
 		elif clip.pos == 4:
 			self.servo.setTarget(0,1000)
+		elif clip.pos == 5:
+			self.servo.setTarget(0,(6400+10000)//2)
 		return ClipPosResponse()	
 
 	def fire_dart(self, status):
