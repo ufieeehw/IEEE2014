@@ -1,0 +1,7 @@
+<launch>
+
+  <include file="$(find ieee2014_launch)/launch/run.launch"/>
+
+  <node name="mission_runner" pkg="ieee2014_mission_runner" type="ieee2014_mission_runner" output="screen"/>
+
+</launch>
