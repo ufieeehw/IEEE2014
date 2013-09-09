@@ -22,27 +22,30 @@ static const int motor_max_effort = 1024;
 				// 32 MHz / 1024 timer ticks = PWM period of 1/(32 kHz) 
 				//		i.e. 32 kHz switching frequency.
 
+static TC0_t &tc_motor = TCF0;
+static PORT_t &port_pwm = PORTF;
+static PORT_t &port_direction = PORTK; 
 
 void motor_init(){
 	
-	TCF0.PER = motor_max_effort; // max effort corresponds to 100% duty cycle, and PER for single slope PWM
-	TCF0.CTRLA = TC_CLKSEL_DIV1_gc; // use clkPER/1 for maximum resolution
-	TCF0.CTRLB = TC0_CCAEN_bm | TC0_CCBEN_bm | TC0_CCCEN_bm | TC0_CCDEN_bm | TC_WGMODE_SS_gc;
+	tc_motor.PER = motor_max_effort; // max effort corresponds to 100% duty cycle, and PER for single slope PWM
+	tc_motor.CTRLA = TC_CLKSEL_DIV1_gc; // use clkPER/1 for maximum resolution
+	tc_motor.CTRLB = TC0_CCAEN_bm | TC0_CCBEN_bm | TC0_CCCEN_bm | TC0_CCDEN_bm | TC_WGMODE_SS_gc;
 	
 	motor_set_direction(MOTOR_1, MOTOR_NEUTRAL);
 	motor_set_direction(MOTOR_2, MOTOR_NEUTRAL);
 	motor_set_direction(MOTOR_3, MOTOR_NEUTRAL);
 	motor_set_direction(MOTOR_4, MOTOR_NEUTRAL);
 
-	PORTK.DIRSET = 0xFF;
-	PORTF.DIRSET = 0x0F;
+	port_direction.DIRSET = 0xFF;
+	port_pwm.DIRSET = 0x0F;
 }
 
 void motor_set_direction(MotorNum motor_num, MotorDirection direction){
-	uint8_t current_directions = PORTK.IN;
+	uint8_t current_directions = port_direction.IN;
 	uint8_t clear_mask = ~(0b11 << (2*motor_num));
 	
-	PORTK.OUT = (current_directions & clear_mask) | (direction << (2*motor_num));
+	port_direction.OUT = (current_directions & clear_mask) | (direction << (2*motor_num));
 }
 
 bool motor_set_effort(MotorNum num, uint16_t new_effort){
@@ -52,16 +55,16 @@ bool motor_set_effort(MotorNum num, uint16_t new_effort){
 	
 	switch(num){
 		case MOTOR_1:
-			TCF0.CCA = new_effort;
+			tc_motor.CCA = new_effort;
 			break;
 		case MOTOR_2:
-			TCF0.CCB = new_effort;
+			tc_motor.CCB = new_effort;
 			break;
 		case MOTOR_3:
-			TCF0.CCC = new_effort;
+			tc_motor.CCC = new_effort;
 			break;
 		case MOTOR_4:
-			TCF0.CCD = new_effort;
+			tc_motor.CCD = new_effort;
 			break;
 		default:
 			return false;
