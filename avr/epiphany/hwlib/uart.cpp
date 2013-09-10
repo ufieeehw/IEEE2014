@@ -13,11 +13,9 @@ static const uint8_t txpin_usb = 3;
 static const uint8_t rxpin_usb = 2;
 static const uint16_t bsel_usb = 1047;		// 115200 baud
 static const uint8_t bscale_usb = 0b1010;
-
-// output flags
 static bool echo_enabled = true;
 
-// stdio parameters
+// Stdio Parameters
 static int put(char ch, FILE* file);
 static int get(FILE* file);
 static FILE stdinout;
