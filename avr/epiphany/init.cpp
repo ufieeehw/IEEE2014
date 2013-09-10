@@ -3,6 +3,7 @@
 #include <avr/interrupt.h>
 #include "hwlib/uart.h"
 #include "hwlib/pid.h"
+#include "hwlib/motor.h"
 
 void init() {
 	init_clocks();
@@ -25,5 +26,6 @@ void init_interrupts() {
 // All initialization functions for peripherals should be placed here.
 void init_modules() {
 	uart_init();
+	motor_init();
 	pid_init();
 }
