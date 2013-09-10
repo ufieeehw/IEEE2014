@@ -11,8 +11,8 @@ static USART_t &uart_usb = USARTC0;
 static PORT_t &uart_port_usb = PORTC;
 static const uint8_t txpin_usb = 3;
 static const uint8_t rxpin_usb = 2;
-static const uint16_t bsel_usb = 1047;		// 115200 baud
-static const uint8_t bscale_usb = 0b1010;
+static const uint16_t bsel_usb = 3301;		// 19200 baud
+static const uint8_t bscale_usb = 0b1011;
 static bool echo_enabled = true;
 
 // Stdio Parameters
