@@ -26,6 +26,6 @@ void init_interrupts() {
 // All initialization functions for peripherals should be placed here.
 void init_modules() {
 	uart_init();
-	motor_init();
-	pid_init();
+//	motor_init();
+//	pid_init();
 }
