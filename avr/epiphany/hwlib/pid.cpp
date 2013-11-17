@@ -7,13 +7,28 @@ static TC0_t &pid_tick_timer = TCC0;
 #define PID_TICK_OVF TCC0_OVF_vect
 static const uint16_t pid_tick_timer_period = 32000; //Will generate an interrupt every 1ms
 static const uint8_t AVG_ARRAY_LENGTH = 5;
-static const double CCA_TO_RAD_MULTIPLIER = 6770.674;
+static const float CCA_TO_RAD_MULTIPLIER = 6770.674;
+static const int sampleTime = 1;
+
+static const float wheelConversionConstants[4][2] =	{	
+															{0.0899, -30.96},	// Wheel 1
+															{0.06878, -19.61},  // Wheel 2
+															{0.08496, -30.78},  // Wheel 3
+															{0.08894, -31.51}   // Wheel 4
+														};
 
 // File-Scope Variables and Structures
 struct pid_wheel_data {
-	int AVG_measurements[AVG_ARRAY_LENGTH];
-	volatile int AVG_measurement_array_position;
-	volatile double AVG_speed;
+	// Wheel Direction
+	MotorDirection direction = MOTOR_NEUTRAL;
+	
+	// Values for measuring the speed of the wheel
+	int AVG_measurements[AVG_ARRAY_LENGTH] = {0};
+	volatile int AVG_measurement_array_position = 0;
+	volatile float AVG_speed = 0;
+	
+	// Values for the actual pid controller
+	float input = 0, output = 0, setpoint = 0, errSum = 0, lastErr = 0, kp = 0, ki = 0, kd = 0;
 } ;
 
 static pid_wheel_data wheelData[4];
@@ -67,6 +82,34 @@ void pid_init() {
 	pid_tick_timer.PER = pid_tick_timer_period;
 	pid_tick_timer.INTCTRLA = TC_OVFINTLVL_LO_gc;
 	
+	pid_setTunings(50,1,1,WHEEL1);
+	pid_setTunings(50,1,1,WHEEL2);
+	pid_setTunings(100,1,1,WHEEL3);
+	pid_setTunings(100,1,1,WHEEL4);
+	
+}
+
+static void pid_compute(wheelNum num) {
+	pid_wheel_data &data = wheelData[num];
+	
+	// Compute all working error variables
+	float error = data.setpoint - data.AVG_speed;
+	data.errSum += error;
+	float dErr = (error - data.lastErr);
+	
+	//Compute the output
+	data.output = (data.kp * error) + (data.ki * data.errSum) + (data.kd * dErr);
+	
+	//Remember some things for later
+	data.lastErr = error;
+}
+
+void pid_setTunings(float Kp, float Ki, float Kd, wheelNum num) {
+	pid_wheel_data &data = wheelData[num];
+	float sampleTimeInSec = ((float)sampleTime);
+	data.kp = Kp;
+	data.ki = Ki*sampleTimeInSec;
+	data.kd = Kd/sampleTimeInSec;
 }
 
 static void pid_measureSpeed(uint16_t measured_CCA, wheelNum num) {
@@ -85,17 +128,46 @@ static void pid_measureSpeed(uint16_t measured_CCA, wheelNum num) {
 	for(int i = 0; i < data.AVG_measurement_array_position; i++)
 		tempAvgVal += data.AVG_measurements[i];
 	
-	tempAvgVal /= (double)data.AVG_measurement_array_position;
+	tempAvgVal /= (float)data.AVG_measurement_array_position;
 	data.AVG_speed = (1.0/tempAvgVal)*CCA_TO_RAD_MULTIPLIER;
 }
 
-double pid_getSpeed(wheelNum num) {
+int pid_convertSpeedToEffort(float speed, wheelNum num) {
+	return (speed - wheelConversionConstants[num][1])/wheelConversionConstants[num][0];
+}
+
+float pid_getSpeed(wheelNum num) {
 	pid_wheel_data &data = wheelData[num];
 	return data.AVG_speed;
 }
 
+void pid_setSpeed(float speed, MotorDirection dir, wheelNum num) {
+	pid_wheel_data &data = wheelData[num];
+	data.setpoint = speed;
+	if(dir == 1) {
+		if((num == WHEEL2) || (num == WHEEL4)) data.direction = MOTOR_BACKWARD;
+		else data.direction = MOTOR_FORWARD;
+	} else if(dir == 2) {
+		if((num == WHEEL2) || (num == WHEEL4)) data.direction = MOTOR_FORWARD;
+		else data.direction = MOTOR_BACKWARD;
+	} else data.direction = MOTOR_NEUTRAL;
+}
+
+
 ISR(PID_TICK_OVF) {
-	// Insert code to be run during PID tick.
+	pid_compute(WHEEL1);
+	pid_compute(WHEEL2);
+	pid_compute(WHEEL3);
+	pid_compute(WHEEL4);
+	motor_set_direction(MOTOR_1, wheelData[WHEEL1].direction);
+	motor_set_effort(MOTOR_1, pid_convertSpeedToEffort(wheelData[WHEEL1].output,WHEEL1));
+	motor_set_direction(MOTOR_2, wheelData[WHEEL2].direction);
+	motor_set_effort(MOTOR_2, pid_convertSpeedToEffort(wheelData[WHEEL2].output,WHEEL2));
+	motor_set_direction(MOTOR_3, wheelData[WHEEL3].direction);
+	motor_set_effort(MOTOR_3, pid_convertSpeedToEffort(wheelData[WHEEL3].output,WHEEL3));
+	motor_set_direction(MOTOR_4, wheelData[WHEEL4].direction);
+	motor_set_effort(MOTOR_4, pid_convertSpeedToEffort(wheelData[WHEEL4].output,WHEEL4));
+	
 }
 
 ISR(TCE0_CCA_vect){
