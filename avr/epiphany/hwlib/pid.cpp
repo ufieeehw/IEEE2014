@@ -82,10 +82,10 @@ void pid_init() {
 	pid_tick_timer.PER = pid_tick_timer_period;
 	pid_tick_timer.INTCTRLA = TC_OVFINTLVL_LO_gc;
 	
-	pid_setTunings(50,1,1,WHEEL1);
-	pid_setTunings(50,1,1,WHEEL2);
-	pid_setTunings(100,1,1,WHEEL3);
-	pid_setTunings(100,1,1,WHEEL4);
+	pid_setTunings(1.5, 0.012, 0.8, WHEEL1);
+	pid_setTunings(1.5, 0.012, 0.8, WHEEL2);
+	pid_setTunings(1.5, 0.012, 0.8, WHEEL3);
+	pid_setTunings(1.5, 0.012, 0.8, WHEEL4);
 	
 }
 
