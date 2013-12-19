@@ -18,7 +18,9 @@
 void twi_init_master(void);
 void twi_write_byte(uint8_t chip_addr, uint8_t command_addr, uint8_t data);
 uint8_t twi_read_byte(uint8_t chip_addr, uint8_t command_addr);
-
+void twi_write_bit(uint8_t chip_addr, uint8_t command_addr, uint8_t bit_num, uint8_t data);
+void twi_write_bits(uint8_t chip_addr, uint8_t command_addr, uint8_t bit_start, uint8_t length, uint8_t data);
+uint8_t twi_read_bits(uint8_t chip_addr, uint8_t command_addr, uint8_t bit_start, uint8_t length);
 
 //Structure for the package that contains data to be transferred
 typedef struct

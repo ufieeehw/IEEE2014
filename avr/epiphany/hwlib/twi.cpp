@@ -140,6 +140,77 @@ uint8_t twi_read_byte(uint8_t chip_addr, uint8_t command_addr) {
 	return data_recieved[0];
 }
 
+
+/** write a single bit in a 16-bit device register.
+ * @param useSPI  true : use SPI 
+ * @param devAddr I2C slave device address or Slave Select pin if SPI
+ * @param regAddr Register regAddr to write to
+ * @param bitNum Bit position to write (0-15)
+ * @param value New bit value to write
+ * @return Status of operation (true = success)
+ */
+void twi_write_bit(uint8_t chip_addr, uint8_t command_addr, uint8_t bit_num, uint8_t data){
+	uint8_t b = twi_read_byte(chip_addr, command_addr);
+	b = (data != 0) ? (b | (1 << bit_num)) : (b & ~(1 << bit_num));
+	twi_write_byte(chip_addr, command_addr, b);
+}
+
+/** Write multiple bits in an 8-bit device register.
+ * @param chip_addr I2C slave device address
+ * @param command_addr Register regAddr to write to
+ * @param bit_start First bit position to write (0-7)
+ * @param length Number of bits to write (not more than 8)
+ * @param data Right-aligned value to write
+ * @return Status of operation (true = success)
+ */
+void twi_write_bits(uint8_t chip_addr, uint8_t command_addr, uint8_t bit_start, uint8_t length, uint8_t data){
+    //      010 value to write
+    // 76543210 bit numbers
+    //    xxx   args: bitStart=4, length=3
+    // 01000000 shift left (8 - length)    ]
+    // 00001000 shift right (7 - bitStart) ] --- two shifts ensure all non-important bits are 0
+    // 11100011 mask byte
+    // 10101111 original value (sample)
+    // 10100011 original & mask
+    // 10101011 masked | value
+	uint8_t b = twi_read_byte(chip_addr, command_addr);
+	if (b != 0) {
+		//uint8_t mask = (0xFF << (8 - length)) | (0xFF >> (bitStart + length - 1));
+		uint8_t mask = (0xFF << (bit_start + 1)) | 0xFF >> ((8 - bit_start) + length - 1);
+		data <<= (8 - length);
+		data >>= (7 - bit_start);
+		b &= mask;
+		b |= data;
+		twi_write_byte(chip_addr, command_addr, b);	
+	}
+}
+
+/** Read multiple bits from an 8-bit device register.
+ * @param chip_addr I2C slave device address
+ * @param command_addr Register regAddr to read from
+ * @param bit_start First bit position to read (0-7)
+ * @param length Number of bits to read (not more than 8)
+ * @return bits read
+ */
+uint8_t twi_read_bits(uint8_t chip_addr, uint8_t command_addr, uint8_t bit_start, uint8_t length) {
+    // 01101001 read byte
+    // 76543210 bit numbers
+    //    xxx   args: bitStart=4, length=3
+    //    010   masked
+    //   -> 010 shifted
+	
+	uint8_t b = twi_read_byte(chip_addr, command_addr);
+	uint8_t r = 0;
+	if (b != 0) {
+		for (uint8_t i = bit_start; i > bit_start - length; i--) {
+			r |= (b & (1 << i));
+		}
+		r >>= (bit_start - length + 1);
+		return r;
+	}
+	return -1;	
+}
+
 //! TWI master write interrupt handler.
 static inline void twim_write_handler(void) {
 	TWI_t *const			bus = transfer.bus;
