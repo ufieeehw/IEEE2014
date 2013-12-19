@@ -199,14 +199,14 @@ static void twim_interrupt_handler(void) {
 		transfer.bus->MASTER.STATUS = master_status | TWI_MASTER_ARBLOST_bm;
 		transfer.bus->MASTER.CTRLC  = TWI_MASTER_CMD_STOP_gc;
 		transfer.status = ERR_BUSY;
-		} else if((master_status & TWI_MASTER_BUSERR_bm) || (master_status & TWI_MASTER_RXACK_bm)) {
+	} else if((master_status & TWI_MASTER_BUSERR_bm) || (master_status & TWI_MASTER_RXACK_bm)) {
 		transfer.bus->MASTER.CTRLC = TWI_MASTER_CMD_STOP_gc;
 		transfer.status = ERR_IO_ERROR;
-		} else if(master_status & TWI_MASTER_WIF_bm) {
+	} else if(master_status & TWI_MASTER_WIF_bm) {
 		twim_write_handler();
-		} else if(master_status & TWI_MASTER_RIF_bm) {
+	} else if(master_status & TWI_MASTER_RIF_bm) {
 		twim_read_handler();
-		} else {
+	} else {
 		transfer.status = ERR_PROTOCOL;
 	}
 }
