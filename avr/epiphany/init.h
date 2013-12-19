@@ -1,6 +1,11 @@
 #ifndef INIT_H_
 #define INIT_H_
 
+#ifndef F_CPU
+#define F_CPU 32000000
+#endif
+
+
 void init();
 
 void init_clocks();
