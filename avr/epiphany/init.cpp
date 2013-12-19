@@ -4,6 +4,7 @@
 #include "hwlib/uart.h"
 #include "hwlib/pid.h"
 #include "hwlib/motor.h"
+#include "hwlib/twi.h"
 
 void init() {
 	init_clocks();
@@ -28,4 +29,5 @@ void init_modules() {
 	uart_init();
 	motor_init();
 	pid_init();
+	twi_init_master();
 }
