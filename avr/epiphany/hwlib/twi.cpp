@@ -211,6 +211,17 @@ uint8_t twi_read_bits(uint8_t chip_addr, uint8_t command_addr, uint8_t bit_start
 	return -1;	
 }
 
+/** Read a single bit from an 8-bit device register.
+ * @param chip_addr I2C slave device address
+ * @param command_addr Register regAddr to read from
+ * @param bit_num Bit position to read (0-7)
+ * @return bit
+ */
+int8_t twi_read_bit(uint8_t chip_addr, uint8_t command_addr, uint8_t bit_num) {
+	uint8_t b = twi_read_byte(chip_addr, command_addr);
+	return b & (1 << bit_num);
+}
+
 //! TWI master write interrupt handler.
 static inline void twim_write_handler(void) {
 	TWI_t *const			bus = transfer.bus;
