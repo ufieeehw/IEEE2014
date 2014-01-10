@@ -1,4 +1,5 @@
 std_msgs/Header header
+uint8 packet_index
 float32 angle_min
 float32 angle_max
 float32 angle_increment

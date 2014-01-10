@@ -8,6 +8,7 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   std_msgs
   message_generation
+  sensor_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -46,7 +47,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate messages in the 'msg' folder
  add_message_files(
    FILES
-   LaserScan.msg
+   LaserMeasurements.msg
  )
 
 ## Generate services in the 'srv' folder
@@ -67,6 +68,7 @@ find_package(catkin REQUIRED COMPONENTS
  generate_messages(
    DEPENDENCIES
    std_msgs
+   sensor_msgs
  )
 
 ###################################
@@ -81,7 +83,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES xv11_driver
-  CATKIN_DEPENDS message_runtime rospy std_msgs
+  CATKIN_DEPENDS message_runtime rospy std_msgs sensor_msgs
 #  DEPENDS system_lib
 )
 
