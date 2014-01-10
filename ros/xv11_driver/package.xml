@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<package>
+  <name>xv11_driver</name>
+  <version>0.0.1</version>
+  <description>The xv11_driver package</description>
+
+  <maintainer email="masonturner@ufl.edu">Mason Turner</maintainer>
+  <maintainer email="khaled.hassan@gmail.com">Khaled Hassan</maintainer>
+
+  <license>BSD</license>
+
+  <url type="website">http://github.com/ufieee2014</url>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>rospy</build_depend>
+  <build_depend>std_msgs</build_depend>
+  <build_depend>message_generation</build_depend>
+  <run_depend>rospy</run_depend>
+  <run_depend>std_msgs</run_depend>
+  <run_depend>message_runtime</run_depend>
+
+
+  <export>
+  </export>
+</package>
