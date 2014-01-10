@@ -11,7 +11,10 @@ enum wheelNum{
 };
 
 void pid_init();
-double pid_getSpeed(wheelNum num);
+void pid_setTunings(float Kp, float Ki, float Kd, wheelNum num);
+int pid_convertSpeedToEffort(float speed, wheelNum num);
+float pid_getSpeed(wheelNum num);
+void pid_setSpeed(float speed, MotorDirection direction, wheelNum num);
 
 
 #endif /* PID_H_ */
