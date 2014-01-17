@@ -1,0 +1,10 @@
+std_msgs/Header header
+uint8 packet_index
+float32 angle_min
+float32 angle_max
+float32 angle_increment
+float32 time_increment
+float32 range_min
+float32 range_max
+float32[] ranges
+float32[] intensities
