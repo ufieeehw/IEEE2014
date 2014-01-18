@@ -68,7 +68,7 @@ xmega_lock = threading.Lock()
 
 def echo_service(echo_request):
 	xmega_lock.acquire(True)  # wait until lock can be acquired before proceeding
-	print "about to echo: ", echo_request.send
+	rospy.loginfo("XMEGA echo - about to echo: %s", echo_request.send)
 
 	packet = XMEGAPacket()
 	packet.msg_body = echo_request.send
@@ -76,19 +76,19 @@ def echo_service(echo_request):
 	packet.msg_length = len(packet.msg_body) + 1  
 
 	connector_object.send_packet(packet)
-	print "sent echo request packet"
+	rospy.loginfo("XMEGA echo - sent echo request packet")
 	response_packet = connector_object.read_packet()
-	print "received echo response packet"
+	rospy.loginfo("XMEGA echo - received echo response packet")
 	
 	ack_packet = XMEGAPacket()
 	ack_packet.msg_type = 0x00
 	ack_packet.msg_length = 0x01
 	connector_object.send_packet(ack_packet)
-	print "sent ack packet"
+	rospy.loginfo("XMEGA echo - sent ack packet")
 
 	service_response = EchoResponse()
 	service_response.recv = response_packet.msg_body
-	print "received: ", service_response.recv
+	rospy.loginfo("XMEGA echo - received response: %s", service_response.recv)
 	xmega_lock.release()
 	return service_response
 
