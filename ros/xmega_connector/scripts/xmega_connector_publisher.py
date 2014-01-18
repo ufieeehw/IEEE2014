@@ -61,6 +61,13 @@ class XMEGAConnector(object):
 		self._serial.write('\0') #need to send an additional character to get XMEGA to finish reading 
 		rospy.logdebug("Sending to XMEGA - message sent")
 
+	def send_ack(self):
+		ack_packet = XMEGAPacket()
+		ack_packet.msg_type = 0x00
+		ack_packet.msg_length = 0x01
+		connector_object.send_packet(ack_packet)
+
+
 connector_object = XMEGAConnector(rospy.get_param('~port'))
 
 xmega_lock = threading.Lock()
@@ -79,11 +86,9 @@ def echo_service(echo_request):
 	rospy.loginfo("XMEGA echo - sent echo request packet")
 	response_packet = connector_object.read_packet()
 	rospy.loginfo("XMEGA echo - received echo response packet")
-	
-	ack_packet = XMEGAPacket()
-	ack_packet.msg_type = 0x00
-	ack_packet.msg_length = 0x01
-	connector_object.send_packet(ack_packet)
+
+	rospy.loginfo("XMEGA echo - sending ack packet")
+	connector_object.send_ack()
 	rospy.loginfo("XMEGA echo - sent ack packet")
 
 	service_response = EchoResponse()
