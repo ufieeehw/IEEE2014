@@ -13,7 +13,7 @@ from std_msgs.msg import Header
 from xmega_connector.msg import XMEGAPacket
 from xmega_connector.srv import * #Echo, EchoRequest, EchoResponse
 
-rospy.init_node('xmega_connector')
+rospy.init_node('xmega_connector', log_level=rospy.DEBUG)
 
 class XMEGAConnector(object):
 	
@@ -21,6 +21,7 @@ class XMEGAConnector(object):
 		self._serial = serial.Serial(port, 19200)
 	
 	def read_packet(self):
+		rospy.logdebug("Reading packet from XMEGA")
 		packet = XMEGAPacket()
 		data = ''
 		start_char_count = 0
@@ -29,32 +30,36 @@ class XMEGAConnector(object):
 			if start_char_count < 3:
 				if self._serial.read(1) is '^':
 					start_char_count += 1
+					rospy.logdebug("Reading from XMEGA - start character received (%d of 3)", start_char_count)
 					continue
 			else:
 				message_len = ord(self._serial.read(1))
-				print "length read: ", hex(message_len)
+				rospy.logdebug("Reading from XMEGA - packet length: %s", hex(message_len))
 				data = self._serial.read(message_len)
 
 				packet.header.stamp = rospy.Time.now()
 				packet.msg_type = data[0]
-				print "type read: ", packet.msg_type
+				rospy.logdebug("Reading from XMEGA - packet type: %s", ord(packet.msg_type))
 				packet.msg_length = message_len
 				packet.msg_body = data[1:]
-				print "body read: ", packet.msg_body
+				rospy.logdebug("Reading from XMEGA - packet body: %s -- hex: %s", packet.msg_body, packet.msg_body.encode("hex"))
 				return packet
 
 	def send_packet(self, packet_to_send):
+		rospy.logdebug("Sending packet to XMEGA")
 		length = packet_to_send.msg_length
 		type = packet_to_send.msg_type
 		message = packet_to_send.msg_body
 
 		self._serial.write("^^^")
+		rospy.logdebug("Sending to XMEGA - sent 3 start characters to XMEGA")
 		self._serial.write(chr(length))
-		print "length sent: ", hex(length)
+		rospy.logdebug("Sending to XMEGA - length sent: %s", hex(length))
 		self._serial.write(chr(type))
-		print "type sent: ", hex(type)
+		rospy.logdebug("Sending to XMEGA - length sent: %s",  hex(type))
 		self._serial.write(message)
 		self._serial.write('\0') #need to send an additional character to get XMEGA to finish reading 
+		rospy.logdebug("Sending to XMEGA - message sent")
 
 connector_object = XMEGAConnector(rospy.get_param('~port'))
 
