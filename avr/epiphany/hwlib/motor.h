@@ -19,6 +19,6 @@ enum MotorNum {
 void motor_init();
 void motor_set_direction(MotorNum motor_num, MotorDirection direction);
 bool motor_set_effort(MotorNum num, uint16_t new_effort);
-
+void motor_set_velocity(MotorNum motor_num, float velocity);
 
 #endif /* MOTOR_H_ */

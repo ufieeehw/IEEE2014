@@ -1,6 +1,14 @@
-#include "PID.h"
+#include "pid.h"
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include "uart.h"
+
+#define constP 30
+#define constI 1
+#define constD 0.1
 
 // Configuration Values
 static TC0_t &pid_tick_timer = TCC0;
@@ -18,77 +26,53 @@ static TC1_t &wheel4Timer = TCD1;
 #define PID_Wheel3_Event_Channel EVSYS_CHMUX_PORTD_PIN0_gc
 #define PID_Wheel4_Event_Channel EVSYS_CHMUX_PORTD_PIN1_gc
 
+// Multipliers
+// (xTicks/10ms)(1000ms/1sec)(1rev/464ticks)(2piRad/1rev) = blah
+static float TICKS_TO_RAD_MULTIPLIER = (1/464.0)*(2*M_PI);
+static const uint16_t pid_tick_timer_period = 5000; //Will generate an interrupt every 1ms
+static const int sampleTimeMs = 10;
+static const float max_wheel_speed = 70.0;
 
-static const uint16_t pid_tick_timer_period = 32000; //Will generate an interrupt every 1ms
-static const uint8_t AVG_ARRAY_LENGTH = 5;
-static const float CCA_TO_RAD_MULTIPLIER = 6770.674;
-static const int sampleTime = 1;
-
-static const float wheelConversionConstants[4][2] =	{	
-															{0.0899, -30.96},	// Wheel 1
-															{0.06878, -19.61},  // Wheel 2
-															{0.08496, -30.78},  // Wheel 3
-															{0.08894, -31.51}   // Wheel 4
-														};
 
 // File-Scope Variables and Structures
 struct pid_wheel_data {
 	// Wheel Direction
-	MotorDirection direction = MOTOR_NEUTRAL;
+	//MotorDirection direction = MOTOR_NEUTRAL;
 	
 	// Values for measuring the speed of the wheel
-	int AVG_measurements[AVG_ARRAY_LENGTH] = {0};
-	volatile int AVG_measurement_array_position = 0;
 	volatile float AVG_speed = 0;
+	volatile int individual_ticks = 0;
+	volatile int ticks = 0;
 	
 	// Values for the actual pid controller
 	float input = 0, output = 0, setpoint = 0, errSum = 0, lastErr = 0, kp = 0, ki = 0, kd = 0;
+	
+	int32_t odometry_ticks = 0;
 } ;
 
 static pid_wheel_data wheelData[4];
 
 void pid_init() {	
 	// Initialize motor frequency measurement timers.
-	wheelPort1.DIRCLR = 0x02;
+	wheelPort1.DIRCLR = 0x03;
 	wheelPort1.PIN0CTRL = PORT_ISC_BOTHEDGES_gc;
-	wheel1Timer.CTRLA = TC_CLKSEL_DIV64_gc;
-	wheel1Timer.CTRLB = TC0_CCAEN_bm;
-	wheel1Timer.CTRLC = 0x00;
-	wheel1Timer.CTRLD = TC_EVACT_FRQ_gc | TC_EVSEL_CH0_gc;
-	wheel1Timer.CTRLE = 0x00;
-	wheel1Timer.INTCTRLB = TC0_CCAINTLVL1_bm;
-	EVSYS.CH0MUX = PID_Wheel1_Event_Channel;
+	wheelPort1.INT0MASK = 0x05;
+	wheelPort1.INTCTRL = 0x05;
 
 	wheelPort1.PIN1CTRL = PORT_ISC_BOTHEDGES_gc;
-	TCE1.CTRLA = TC_CLKSEL_DIV64_gc;
-	TCE1.CTRLB = TC1_CCAEN_bm;
-	TCE1.CTRLC = 0x00;
-	TCE1.CTRLD = TC_EVACT_FRQ_gc | TC_EVSEL_CH1_gc;
-	TCE1.CTRLE = 0x00;
-	TCE1.INTCTRLB = TC1_CCAINTLVL1_bm;
-	EVSYS.CH1MUX = PID_Wheel2_Event_Channel;
+	wheelPort1.INT1MASK = 0x0A;
 	
-	wheelPort2.DIRCLR = 0x02;
+	wheelPort2.DIRCLR = 0x03;
 	wheelPort2.PIN0CTRL = PORT_ISC_BOTHEDGES_gc;
-	wheel3Timer.CTRLA = TC_CLKSEL_DIV64_gc;
-	wheel3Timer.CTRLB = TC0_CCAEN_bm;
-	wheel3Timer.CTRLC = 0x00;
-	wheel3Timer.CTRLD = TC_EVACT_FRQ_gc | TC_EVSEL_CH2_gc;
-	wheel3Timer.CTRLE = 0x00;
-	wheel3Timer.INTCTRLB = TC1_CCAINTLVL1_bm;
-	EVSYS.CH2MUX = PID_Wheel3_Event_Channel;
+	wheelPort2.INT0MASK = 0x05;
+	wheelPort2.INTCTRL = 0x05;
 
 	wheelPort2.PIN1CTRL = PORT_ISC_BOTHEDGES_gc;
-	wheel4Timer.CTRLA = TC_CLKSEL_DIV64_gc;
-	wheel4Timer.CTRLB = TC1_CCAEN_bm;
-	wheel4Timer.CTRLC = 0x00;
-	wheel4Timer.CTRLD = TC_EVACT_FRQ_gc | TC_EVSEL_CH3_gc;
-	wheel4Timer.CTRLE = 0x00;
-	wheel4Timer.INTCTRLB = TC1_CCAINTLVL1_bm;
-	EVSYS.CH3MUX = PID_Wheel4_Event_Channel;
+	wheelPort2.INT1MASK = 0x0A;
+
 	
 	// Initialize the PID tick timer
-	pid_tick_timer.CTRLA = TC_CLKSEL_DIV1_gc;	//Uses timer on portC since all timers on PORT E and D will be used for wheels.
+	pid_tick_timer.CTRLA = TC_CLKSEL_DIV64_gc;	//Uses timer on portC since all timers on PORT E and D will be used for wheels.
 	pid_tick_timer.CTRLB = 0x00;
 	pid_tick_timer.CTRLC = 0x00;
 	pid_tick_timer.CTRLD = 0x00;
@@ -96,10 +80,10 @@ void pid_init() {
 	pid_tick_timer.PER = pid_tick_timer_period;
 	pid_tick_timer.INTCTRLA = TC_OVFINTLVL_LO_gc;
 	
-	pid_setTunings(1.5, 0.012, 0.8, WHEEL1);
-	pid_setTunings(1.5, 0.012, 0.8, WHEEL2);
-	pid_setTunings(1.5, 0.012, 0.8, WHEEL3);
-	pid_setTunings(1.5, 0.012, 0.8, WHEEL4);
+	pid_setTunings(constP, constI, constD, WHEEL1);
+	pid_setTunings(constP, constI, constD, WHEEL2);
+	pid_setTunings(constP, constI, constD, WHEEL3);
+	pid_setTunings(constP, constI, constD, WHEEL4);
 	
 }
 
@@ -120,34 +104,22 @@ static void pid_compute(wheelNum num) {
 
 void pid_setTunings(float Kp, float Ki, float Kd, wheelNum num) {
 	pid_wheel_data &data = wheelData[num];
-	float sampleTimeInSec = ((float)sampleTime);
+	float sampleTimeInSec = ((float)sampleTimeMs);
 	data.kp = Kp;
 	data.ki = Ki*sampleTimeInSec;
 	data.kd = Kd/sampleTimeInSec;
 }
 
-static void pid_measureSpeed(uint16_t measured_CCA, wheelNum num) {
+static void pid_measureSpeed(wheelNum num) {
 	pid_wheel_data &data = wheelData[num];
 	
-	uint16_t tempAvgVal = 0;
+	cli();
+	data.ticks = data.individual_ticks;
+	data.individual_ticks = 0;
+	sei();
 	
-	// Array operates as FIFO, w/ elements added to end of array, and values shifted forward to make room for new value.
-	if(data.AVG_measurement_array_position == AVG_ARRAY_LENGTH) {
-		for(int i = 0; i < AVG_ARRAY_LENGTH - 1; i++)
-			data.AVG_measurements[i] = data.AVG_measurements[i+1];
-		data.AVG_measurement_array_position--;
-	}
-	data.AVG_measurements[data.AVG_measurement_array_position++] = measured_CCA;
-	
-	for(int i = 0; i < data.AVG_measurement_array_position; i++)
-		tempAvgVal += data.AVG_measurements[i];
-	
-	tempAvgVal /= (float)data.AVG_measurement_array_position;
-	data.AVG_speed = (1.0/tempAvgVal)*CCA_TO_RAD_MULTIPLIER;
-}
-
-int pid_convertSpeedToEffort(float speed, wheelNum num) {
-	return (speed - wheelConversionConstants[num][1])/wheelConversionConstants[num][0];
+	data.odometry_ticks += data.ticks;
+	data.AVG_speed = data.ticks*TICKS_TO_RAD_MULTIPLIER/10e-3;
 }
 
 float pid_getSpeed(wheelNum num) {
@@ -155,47 +127,160 @@ float pid_getSpeed(wheelNum num) {
 	return data.AVG_speed;
 }
 
-void pid_setSpeed(float speed, MotorDirection dir, wheelNum num) {
+void pid_setSpeed(float speed, wheelNum num) {
 	pid_wheel_data &data = wheelData[num];
 	data.setpoint = speed;
-	if(dir == 1) {
-		if((num == WHEEL2) || (num == WHEEL4)) data.direction = MOTOR_BACKWARD;
-		else data.direction = MOTOR_FORWARD;
-	} else if(dir == 2) {
-		if((num == WHEEL2) || (num == WHEEL4)) data.direction = MOTOR_FORWARD;
-		else data.direction = MOTOR_BACKWARD;
-	} else data.direction = MOTOR_NEUTRAL;
+}
+
+// Handler that sets wheel speeds based on message.
+// Arguments:
+//	message := a message that contains the following:
+//		4 bytes, each is a signed representation of
+//		the speed of the wheels from -100 to 100.
+//		This means that if you want to pass this message
+//		you should format convert 4 values between -100
+//		and 100, and put them into characters in an array.
+//	len := the length of the message.  E.g. the number of bytes in the array
+void pid_set_speed_handler(char* message, uint8_t len) {
+	cli();
+	
+	int8_t	wheel1percent = (int8_t)message[0], 
+			wheel2percent = (int8_t)message[1], 
+			wheel3percent = (int8_t)message[2], 
+			wheel4percent = (int8_t)message[3];
+	
+	pid_setSpeed(max_wheel_speed * wheel1percent/100.0, WHEEL1);
+	pid_setSpeed(max_wheel_speed * wheel2percent/100.0, WHEEL2);
+	pid_setSpeed(max_wheel_speed * wheel3percent/100.0, WHEEL3);
+	pid_setSpeed(max_wheel_speed * wheel4percent/100.0, WHEEL4);
+	sei();
+}
+
+static uint32_t* pid_get_odometry(uint32_t* returnData) {
+	for(int i = 0; i < 4; i++) {
+		returnData[i] = wheelData[i].odometry_ticks;
+		wheelData[i].odometry_ticks = 0;
+	}
+	return returnData;
+}
+
+void pid_get_odometry_handler(char* message, uint8_t len) {
+	char odometry[16];
+	uint32_t wheelOdometry[4];
+	pid_get_odometry(wheelOdometry);
+	
+	for(int i = 0; i < 4; i++) {
+		odometry[i*4  ] = (char)((wheelOdometry[i] >> 24) & 0xFF);
+		odometry[i*4+1] = (char)((wheelOdometry[i] >> 16) & 0xFF);
+		odometry[i*4+2] = (char)((wheelOdometry[i] >> 8)  & 0xFF);
+		odometry[i*4+3] = (char)((wheelOdometry[i])       & 0xFF);
+	}
+
+	uart_send_msg_block(PIDgetOdometry, odometry, 17);
+}
+
+static inline void pid_set_speed_multiplier(float val) {
+	TICKS_TO_RAD_MULTIPLIER = val;
+}
+
+static inline float pid_get_speed_multiplier() {
+	return TICKS_TO_RAD_MULTIPLIER;
+}
+
+// Because the multiplier is a floating point value, we'll multiply it by 1000 first, and then send it.
+// Or, if we're recieving it, we'll divide it by 1000.
+void pid_get_speed_multiplier_handler(char* messsage, uint8_t len) {
+	
+}
+
+void pid_set_speed_multiplier_handler(char* messsage, uint8_t len) {
+	for(int i = 0; i < len; i++) {
+		
+	}
 }
 
 
 ISR(PID_TICK_OVF) {
+	pid_measureSpeed(WHEEL1);
+	pid_measureSpeed(WHEEL2);
+	pid_measureSpeed(WHEEL3);
+	pid_measureSpeed(WHEEL4);
 	pid_compute(WHEEL1);
 	pid_compute(WHEEL2);
 	pid_compute(WHEEL3);
 	pid_compute(WHEEL4);
-	motor_set_direction(MOTOR_1, wheelData[WHEEL1].direction);
-	motor_set_effort(MOTOR_1, pid_convertSpeedToEffort(wheelData[WHEEL1].output,WHEEL1));
-	motor_set_direction(MOTOR_2, wheelData[WHEEL2].direction);
-	motor_set_effort(MOTOR_2, pid_convertSpeedToEffort(wheelData[WHEEL2].output,WHEEL2));
-	motor_set_direction(MOTOR_3, wheelData[WHEEL3].direction);
-	motor_set_effort(MOTOR_3, pid_convertSpeedToEffort(wheelData[WHEEL3].output,WHEEL3));
-	motor_set_direction(MOTOR_4, wheelData[WHEEL4].direction);
-	motor_set_effort(MOTOR_4, pid_convertSpeedToEffort(wheelData[WHEEL4].output,WHEEL4));
+	motor_set_velocity(MOTOR_1, wheelData[WHEEL1].output);
+	motor_set_velocity(MOTOR_2, wheelData[WHEEL2].output);
+	motor_set_velocity(MOTOR_3, wheelData[WHEEL3].output);
+	motor_set_velocity(MOTOR_4, wheelData[WHEEL4].output);
+}
+
+unsigned int grayToBinary(unsigned int num)
+{
+	unsigned int mask;
+	for (mask = num >> 1; mask != 0; mask = mask >> 1)
+	{
+		num = num ^ mask;
+	}
+	return num;
+}
+
+ISR(PORTE_INT0_vect){
+	// pins 0 and 2
+	static int8_t old_value = 0;
+	int8_t new_value = grayToBinary(((wheelPort1.IN & 4) >> 1) | (wheelPort1.IN & 1));
+	
+	int8_t difference = new_value - old_value;
+	if(difference > 2) difference -= 4;
+	if(difference < -2) difference += 4;
+	
+	wheelData[0].individual_ticks += difference;
+	
+	old_value = new_value;
 	
 }
 
-ISR(TCE0_CCA_vect){
-	pid_measureSpeed(TCE0.CCA, WHEEL1);
+ISR(PORTE_INT1_vect){
+	
+	// pins 1 and 3
+	static int8_t old_value = 0;
+	int8_t new_value = grayToBinary(((wheelPort1.IN & 8) >> 1) | (wheelPort1.IN & 2));
+	
+	int8_t difference = new_value - old_value;
+	if(difference > 2) difference -= 4;
+	if(difference < -2) difference += 4;
+	
+	wheelData[1].individual_ticks += difference;
+	
+	old_value = new_value;
 }
 
-ISR(TCE1_CCA_vect){
-	pid_measureSpeed(TCE1.CCA, WHEEL2);
+ISR(PORTD_INT0_vect){
+	// pins 0 and 2
+	static int8_t old_value = 0;
+	int8_t new_value = grayToBinary(((wheelPort2.IN & 4) >> 1) | (wheelPort2.IN & 1));
+		
+	int8_t difference = new_value - old_value;
+	if(difference > 2) difference -= 4;
+	if(difference < -2) difference += 4;
+		
+	wheelData[2].individual_ticks += difference;
+		
+	old_value = new_value;
 }
 
-ISR(TCD0_CCA_vect){
-	pid_measureSpeed(TCD0.CCA, WHEEL3);
+ISR(PORTD_INT1_vect){
+	// pins 1 and 3
+	static int8_t old_value = 0;
+	int8_t new_value = grayToBinary(((wheelPort2.IN & 8) >> 1) | (wheelPort2.IN & 2));
+	
+	int8_t difference = new_value - old_value;
+	if(difference > 2) difference -= 4;
+	if(difference < -2) difference += 4;
+	
+	wheelData[3].individual_ticks += difference;
+	
+	old_value = new_value;
 }
+	
 
-ISR(TCD1_CCA_vect){
-	pid_measureSpeed(TCD1.CCA, WHEEL4);
-}

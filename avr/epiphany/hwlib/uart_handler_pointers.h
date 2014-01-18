@@ -19,12 +19,12 @@
 
 typedef void (*HandlerPointer)(char*, uint8_t);
 extern HandlerPointer HandlerPointers[6] = {
-	NULL,
-	NULL,
-	uart_echo_request,
-	uart_echo_reply,
-	pid_set_speed_handler,
-	pid_get_odometry_handler
+	NULL,						// 0x00 AckValid
+	NULL,						// 0x01 AckInvalid
+	uart_echo_request,			// 0x02
+	uart_echo_reply,			// 0x03
+	pid_set_speed_handler,		// 0x04
+	pid_get_odometry_handler	// 0x05
 };
 
 

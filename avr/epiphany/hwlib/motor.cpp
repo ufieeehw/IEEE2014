@@ -1,6 +1,7 @@
 #include "motor.h"
 
 #include <avr/io.h>
+#include <math.h>
 
 /*
  *	Epiphany DIY Quad Motor configuration:
@@ -42,6 +43,10 @@ void motor_init(){
 }
 
 void motor_set_direction(MotorNum motor_num, MotorDirection direction){
+	if(motor_num == MOTOR_1 || motor_num == MOTOR_3) {
+		if(direction == MOTOR_FORWARD) direction = MOTOR_BACKWARD;
+		else if(direction == MOTOR_BACKWARD) direction = MOTOR_FORWARD;
+	}
 	uint8_t current_directions = port_direction.IN;
 	uint8_t clear_mask = ~(0b11 << (2*motor_num));
 	
@@ -50,7 +55,8 @@ void motor_set_direction(MotorNum motor_num, MotorDirection direction){
 
 bool motor_set_effort(MotorNum num, uint16_t new_effort){
 	if(new_effort > 1024){
-		return false;
+		//return false;
+		new_effort = 1024;
 	}
 	
 	switch(num){
@@ -72,4 +78,14 @@ bool motor_set_effort(MotorNum num, uint16_t new_effort){
 	
 	return true;
 }
-	
+
+void motor_set_velocity(MotorNum motor_num, float velocity) {
+	if(velocity < 0) {
+		motor_set_direction(motor_num, MOTOR_BACKWARD);
+	} else {
+		motor_set_direction(motor_num, MOTOR_FORWARD);
+	}
+	float speed = fabs(velocity);
+	if(speed >= 1023) speed = 1023;
+	motor_set_effort(motor_num, speed);
+}

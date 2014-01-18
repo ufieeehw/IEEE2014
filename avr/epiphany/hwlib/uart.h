@@ -3,7 +3,6 @@
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
-#include <stdio.h>
 #include <string.h>
 
 void uart_init();
@@ -33,6 +32,7 @@ typedef enum MessageTypes_enum {
 	EchoReply = 0x03,
 	PIDsetSpeed = 0x04,
 	PIDgetOdometry = 0x05
+
 }MessageTypes_t;
 
 

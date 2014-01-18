@@ -109,6 +109,7 @@ static void receive() {
 			}else {
 				message_to_be_handled = true;
 				rx_state = WaitingForStart;
+				uart_data_usb.buf_pos = 0;
 			}
 		break;
 		
