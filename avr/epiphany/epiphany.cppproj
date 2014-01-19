@@ -18,8 +18,7 @@
     <ToolchainFlavour>Native</ToolchainFlavour>
     <KeepTimersRunning>true</KeepTimersRunning>
     <OverrideVtor>false</OverrideVtor>
-    <OverrideVtorValue>
-    </OverrideVtorValue>
+    <OverrideVtorValue>exception_table</OverrideVtorValue>
     <eraseonlaunchrule>0</eraseonlaunchrule>
     <AsfVersion>3.5.1</AsfVersion>
     <avrtoolinterface>JTAG</avrtoolinterface>
@@ -179,6 +178,12 @@
     <Folder Include="hwlib\" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="hwlib\adc.cpp">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="hwlib\adc.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="hwlib\clock.cpp">
       <SubType>compile</SubType>
     </Compile>
@@ -201,6 +206,12 @@
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="hwlib\pid.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="hwlib\tcs34725.cpp">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="hwlib\tcs34725.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="hwlib\twi.cpp">

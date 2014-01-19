@@ -13,6 +13,12 @@ bool uart_send_msg_noblock(uint8_t type, char* msg, uint8_t len);
 char* uart_get_msg(void);
 bool uart_get_msg_status();
 void uart_set_msg_status(bool status);
+float uart_int32_to_float(char* data);
+float uart_int16_to_float(char* data);
+float uart_int8_to_float(char* data);
+void uart_float_to_char32(char* buffer, float data);
+void uart_float_to_char16(char* buffer, float data);
+void uart_float_to_char8(char* buffer, float data);
 
 // uart Handler Functions
 void uart_echo_request(char* message, uint8_t len);

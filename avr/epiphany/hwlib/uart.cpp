@@ -216,6 +216,47 @@ void uart_echo_reply(char* message, uint8_t len) {
 	uart_send_msg_block(EchoReply, message, len);
 }
 
+float uart_int32_to_float(char* data) {
+	int32_t haxor32 = (int32_t)(data[3] << 24 | data[2] << 16 | data[1] << 8 | data[0]);
+	float flaxor = (float)(haxor32)/1000.0;
+	return flaxor;
+}
+
+float uart_int16_to_float(char* data) {
+	int16_t haxor16 = (int16_t)(data[1] << 8 | data[0]);
+	float flaxor = (float)(haxor16)/1000.0;
+	return flaxor;
+}
+
+float uart_int8_to_float(char* data) {
+	int16_t haxor8 = (int8_t)(data[0]);
+	float flaxor = (float)(haxor8)/1000.0;
+	return flaxor;
+}
+
+void uart_float_to_char32(char* buffer, float data) {
+	int32_t haxor32 = data*1000;
+	for(int i = 0; i < 3; i++){
+		buffer[i] = (char)((haxor32 >> i*8) & 0x000F);
+	}
+}
+
+void uart_float_to_char16(char* buffer, float data) {
+	int16_t haxor16 = data*1000;
+	for(int i = 0; i < 2; i++){
+		buffer[i] = (char)((haxor16 >> i*8) & 0x0F);
+	}
+}
+
+void uart_float_to_char8(char* buffer, float data) {
+	int8_t haxor8 = data*1000;
+	for(int i = 0; i < 1; i++){
+		buffer[i] = (char)((haxor8 >> i*8) & 0xF);
+	}
+}
+
+
+
 ISR(TXVEC_USB) {
 	transmit();
 }

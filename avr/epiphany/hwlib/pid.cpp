@@ -134,25 +134,16 @@ void pid_setSpeed(float speed, wheelNum num) {
 
 // Handler that sets wheel speeds based on message.
 // Arguments:
-//	message := a message that contains the following:
-//		4 bytes, each is a signed representation of
-//		the speed of the wheels from -100 to 100.
-//		This means that if you want to pass this message
-//		you should format convert 4 values between -100
-//		and 100, and put them into characters in an array.
+//	message := [Wheel1B0, Wheel1B1, Wheel1B2, Wheel1B3, ... ,  Wheel4B0, Wheel4B1, Wheel4B2, Wheel4B3] 
+//		16 bytes, little endian 32bit numbers that represent the desired wheel speed
+//		multiplied by 1000.  Pass a pointer to the low byte of 
 //	len := the length of the message.  E.g. the number of bytes in the array
 void pid_set_speed_handler(char* message, uint8_t len) {
 	cli();
+
+	for(int i = 0; i < 4; i++)
+		pid_setSpeed(uart_int32_to_float(&message[4*i]), (wheelNum)i);
 	
-	int8_t	wheel1percent = (int8_t)message[0], 
-			wheel2percent = (int8_t)message[1], 
-			wheel3percent = (int8_t)message[2], 
-			wheel4percent = (int8_t)message[3];
-	
-	pid_setSpeed(max_wheel_speed * wheel1percent/100.0, WHEEL1);
-	pid_setSpeed(max_wheel_speed * wheel2percent/100.0, WHEEL2);
-	pid_setSpeed(max_wheel_speed * wheel3percent/100.0, WHEEL3);
-	pid_setSpeed(max_wheel_speed * wheel4percent/100.0, WHEEL4);
 	sei();
 }
 
