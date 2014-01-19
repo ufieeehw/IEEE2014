@@ -1,0 +1,175 @@
+#!/usr/bin/env python
+
+from __future__ import division
+
+import math
+import time
+
+import pygame
+
+import rospy
+from xv11_driver.msg import LaserMeasurements
+from geometry_msgs.msg import TwistStamped
+
+from ieee2014_simulator.vector import v, V
+
+SCALE = 200
+def round_point((x, y)):
+    return int(SCALE*x+320+.5), int(SCALE*-y+240+.5)
+
+inf = 1e500
+assert math.isinf(inf)
+
+class Line(object):
+    def __init__(self, point1, point2):
+        self.point1 = point1
+        self.point2 = point2
+    
+    def update(self, t, course):
+        pass
+    
+    def draw(self, display):
+        pygame.draw.line(display, (255, 255, 255), round_point(self.point1), round_point(self.point2))
+    
+    def intersect_with_ray(self, start, direction):
+        start = V(start)
+        direction = V(direction).unit()
+        
+        line_point = V(self.point1)
+        line_direction = (V(self.point2) - V(self.point1)).unit()
+        line_perpendicular = v(line_direction[1], -line_direction[0])
+        
+        start2 = start - line_point
+        
+        signed_distance = start2 * line_perpendicular
+        decrease = direction * line_perpendicular
+        
+        res = -signed_distance/decrease
+        if res < 0:
+            return inf
+        
+        hit_point = start + res * direction
+        distance_along_line = (hit_point - line_point) * line_direction
+        if not (0 <= distance_along_line <= (V(self.point2) - V(self.point1)).norm()):
+            return inf
+        
+        return res
+
+class Robot(object):
+    def __init__(self, position, angle):
+        self.t = time.time()
+        self.position = V(position)
+        self.angle = angle
+        
+        self.vel = v(0, 0)
+        self.angvel = 0
+        
+        self.time_left = 0
+        
+        self.laser_angle = 0
+        self.lidar_pub = rospy.Publisher('lidar', LaserMeasurements)
+        
+        def twist_cb(msg):
+            self._set_velocity((msg.twist.linear.x, msg.twist.linear.y), msg.twist.angular.z)
+        rospy.Subscriber('twist', TwistStamped, twist_cb)
+    
+    def _set_velocity(self, vel, angvel):
+        self.vel = V(vel)
+        self.angvel = angvel
+    
+    @property
+    def forward_vector(self):
+        return v(math.cos(self.angle), math.sin(self.angle))
+    @property
+    def left_vector(self):
+        return v(math.cos(self.angle+math.pi/2), math.sin(self.angle+math.pi/2))
+    
+    def update(self, t, course):
+        self.ends = []
+        msg = None
+        
+        dt = 1/360/3
+        while abs((self.t + dt) - t) < abs(self.t - t):
+            self.t += dt
+            
+            self.position += self.forward_vector * self.vel[0]*dt + self.left_vector * self.vel[1]*dt
+            self.angle += self.angvel * dt
+            
+            self.laser_angle += math.radians(1)
+            
+            start = self.position
+            direction = v(math.cos(self.angle + self.laser_angle), math.sin(self.angle + self.laser_angle))
+            
+            hit_obj = min(course, key=lambda obj: obj.intersect_with_ray(start, direction))
+            dist = hit_obj.intersect_with_ray(start, direction)
+            if not math.isinf(dist):
+                self.ends.append(start + direction * dist)
+            else:
+                self.ends.append(start + direction * 100)
+            
+            if msg is None:
+                msg = LaserMeasurements()
+                msg.header.stamp = rospy.Time(self.t)
+                msg.header.frame_id = '/lidar'
+                msg.angle_min = self.laser_angle
+                msg.angle_max = self.laser_angle
+                msg.angle_increment = math.radians(1)
+                msg.time_increment = dt
+                msg.range_min = 0.1
+                msg.range_max = 3
+            
+            msg.angle_max = max(msg.angle_max, self.laser_angle)
+            
+            msg.ranges.append(dist)
+            msg.intensities.append(1 if not math.isinf(dist) else 0)
+        
+        if msg is not None:
+            self.lidar_pub.publish(msg)
+        
+        self.laser_angle %= 2*math.pi
+    
+    def draw(self, display):
+        r = .1
+        for end in self.ends:
+            pygame.draw.line(display, (255, 0, 0), round_point(self.position), round_point(end))
+        pygame.draw.circle(display, (0, 255, 0), round_point(self.position), int(SCALE*r+.5))
+        pygame.draw.line(display, (0, 0, 255), round_point(self.position), round_point(self.position + r*self.forward_vector))
+    
+    def intersect_with_ray(self, start, direction):
+        return inf
+
+
+
+def main():
+    rospy.init_node('ieee2014_simulator')
+
+    robot = Robot((0.1, 0.1), 0.1)
+
+    course = [
+        Line((-1, 0.5), (1, 0.5)),
+        Line((1, 0.5), (1, -0.5)),
+        Line((1, -0.5), (-1, -0.5)),
+        Line((-1, -0.5), (-1, 0.5)),
+        robot,
+    ]
+    
+    display = pygame.display.set_mode((640, 480))
+    
+    while not rospy.is_shutdown():
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return
+        
+        t = time.time()
+        
+        for obj in course:
+            obj.update(t, course)
+        
+        display.fill((0, 0, 0))
+        for obj in course:
+            obj.draw(display)
+        
+        pygame.display.update()
+
+
+main()
