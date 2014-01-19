@@ -35,14 +35,17 @@ def sendAck():
 
 def setWheelSpeeds():
 	wheelStruct = ''
-	wheel1 = int(raw_input("Wheel1: "))
-	wheel2 = int(raw_input("Wheel2: "))
-	wheel3 = int(raw_input("wheel3: "))
-	wheel4 = int(raw_input("wheel4: "))
+	wheel1 = int(float( raw_input("Wheel1: ")) * 1000.0)
+	wheel2 = int(float( raw_input("Wheel2: ")) * 1000.0)
+	wheel3 = int(float( raw_input("wheel3: ")) * 1000.0)
+	wheel4 = int(float( raw_input("wheel4: ")) * 1000.0)
 
-	wheelStruct = struct.pack('bbbb', wheel1,wheel2,wheel3,wheel4)
+	print "ws trans: ",  wheel1, " ", wheel2, ' ', wheel3, ' ', wheel4
 
-	test = '^^^' + chr(5) + chr(4) + wheelStruct + '\0'
+	print hex(wheel1), ' ', hex(wheel2), ' ', hex(wheel3), ' ', hex(wheel4)
+	wheelStruct = struct.pack('<llll', wheel1,wheel2,wheel3,wheel4)
+
+	test = '^^^' + chr(len(wheelStruct + chr(4))) + chr(4) + wheelStruct + '\0'
 	hexStr = test.encode("hex")
 
 	print hexStr
