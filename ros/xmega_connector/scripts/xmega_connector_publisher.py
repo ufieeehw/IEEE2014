@@ -1,5 +1,7 @@
 #!/usr/bin/python
 
+from __future__ import division
+
 import roslib
 roslib.load_manifest('xmega_connector')
 
@@ -12,6 +14,7 @@ import math
 from std_msgs.msg import Header
 from xmega_connector.msg import XMEGAPacket
 from xmega_connector.srv import * #Echo, EchoRequest, EchoResponse
+from geometry_msgs.msg import TwistStamped, Twist, Vector3
 
 rospy.init_node('xmega_connector', log_level=rospy.DEBUG)
 
@@ -58,7 +61,7 @@ class XMEGAConnector(object):
 		self._serial.write(chr(type))
 		rospy.logdebug("Sending to XMEGA - length sent: %s",  hex(type))
 		self._serial.write(message)
-		self._serial.write('\0') #need to send an additional character to get XMEGA to finish reading 
+		self._serial.write('\0') #need to send an additional character to get XMEGA to finish reading
 		rospy.logdebug("Sending to XMEGA - message sent")
 
 	def send_ack(self):
@@ -101,8 +104,13 @@ def set_wheel_speed_service(ws_req):
 	xmega_lock.acquire(True)
 	packet = XMEGAPacket()
 	packet.msg_type = 0x04
-	packet.msg_body = struct.pack('bbbb', ws_req.wheel1, ws_req.wheel2,
-		ws_req.wheel3, ws_req.wheel4)
+
+	wheel1 = int(ws_req.wheel1 * 1000.0)
+	wheel2 = int(ws_req.wheel2 * 1000.0)
+	wheel3 = int(ws_req.wheel3 * 1000.0)
+	wheel4 = int(ws_req.wheel4 * 1000.0)
+
+	packet.msg_body = struct.pack('<llll', wheel1, wheel2, wheel3, wheel4)
 	packet.msg_length = len(packet.msg_body) + 1
 
 	connector_object.send_packet(packet)
@@ -131,9 +139,29 @@ def get_odometry_service(odo_req):
 
 	return service_response
 
+def trajectory_to_wheel_speeds(msg):
+	msg = TwistStamped()
+	ws_req = SetWheelSpeedsRequest()
+
+	wheel_diameter = 54e-3  # wheel outside diameter is 54 mm
+	wheel_circumference = math.pi * wheel_diameter  # wheel circumference in meters
+
+	translational_magnitude = math.hypot(msg.twist.linear.x, msg.twist.linear.y)  # magnitude of translational velocity desired in meters/second
+	translational_angle = math.atan(msg.twist.linear.x/msg.twist.linear.y)  # angle of translational velocity desired in radians
+		# why is it x/y instead of y/x? because the angle we want is not from the x axis, but instead
+	translational_magnitude *= (2*math.pi)/(wheel_circumference)  #convert from meters/second to radians/second for the wheels
+
+	ws_req.wheel1 = translational_magnitude * math.sin(translational_angle + math.pi/4) + msg.twist.angular.z
+	ws_req.wheel2 = translational_magnitude * math.cos(translational_angle + math.pi/4) - msg.twist.angular.z
+	ws_req.wheel3 = translational_magnitude * math.cos(translational_angle + math.pi/4) - msg.twist.angular.z
+	ws_req.wheel4 = translational_magnitude * math.sin(translational_angle + math.pi/4) + msg.twist.angular.z
+
+	set_wheel_speed_service(ws_req)
+
 rospy.Service('~echo', Echo, echo_service)
 rospy.Service('~set_wheel_speeds', SetWheelSpeeds, set_wheel_speed_service)
 rospy.Service('~get_odometry', GetOdometry, get_odometry_service)
+rospy.Subscriber('/trajectory', TwistStamped, trajectory_to_wheel_speeds)
 
 while not rospy.is_shutdown():
 
