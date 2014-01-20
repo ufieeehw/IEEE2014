@@ -2,6 +2,8 @@ Debug/
 .d
 .o
 .idea
+.swp
 
 *~
 *.pyc
+
