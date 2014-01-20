@@ -16,10 +16,10 @@ from xmega_connector.srv import * #Echo, EchoRequest, EchoResponse
 rospy.init_node('xmega_connector', log_level=rospy.DEBUG)
 
 class XMEGAConnector(object):
-	
+
 	def __init__(self, port):
 		self._serial = serial.Serial(port, 19200)
-	
+
 	def read_packet(self):
 		rospy.logdebug("Reading packet from XMEGA")
 		packet = XMEGAPacket()
@@ -80,7 +80,7 @@ def echo_service(echo_request):
 	packet = XMEGAPacket()
 	packet.msg_body = echo_request.send
 	packet.msg_type = 0x02  # 0x02 echo request, 0x03 echo reply
-	packet.msg_length = len(packet.msg_body) + 1  
+	packet.msg_length = len(packet.msg_body) + 1
 
 	connector_object.send_packet(packet)
 	rospy.loginfo("XMEGA echo - sent echo request packet")
@@ -101,7 +101,7 @@ def set_wheel_speed_service(ws_req):
 	xmega_lock.acquire(True)
 	packet = XMEGAPacket()
 	packet.msg_type = 0x04
-	packet.msg_body = struct.pack('bbbb', ws_req.wheel1, ws_req.wheel2, 
+	packet.msg_body = struct.pack('bbbb', ws_req.wheel1, ws_req.wheel2,
 		ws_req.wheel3, ws_req.wheel4)
 	packet.msg_length = len(packet.msg_body) + 1
 
@@ -110,8 +110,30 @@ def set_wheel_speed_service(ws_req):
 	xmega_lock.release()
 	return SetWheelSpeedsResponse()
 
+def get_odometry_service(odo_req):
+	xmega_lock.acquire(True)
+	packet = XMEGAPacket()
+	packet.msg_type = 0x05
+	packet.msg_length = 1
+
+	connector_object.send_packet(packet)
+
+	response_packet = connector_object.read_packet()
+	wheel1, wheel2, wheel3, wheel4 = struct.unpack(">llll", response_packet.msg_body)
+	connector_object.send_ack()
+
+	service_response = GetOdometryResponse()
+	service_response.wheel1 = wheel1
+	service_response.wheel2 = wheel2
+	service_response.wheel3 = wheel3
+	service_response.wheel4 = wheel4
+	xmega_lock.release()
+
+	return service_response
+
 rospy.Service('~echo', Echo, echo_service)
 rospy.Service('~set_wheel_speeds', SetWheelSpeeds, set_wheel_speed_service)
+rospy.Service('~get_odometry', GetOdometry, get_odometry_service)
 
 while not rospy.is_shutdown():
 
