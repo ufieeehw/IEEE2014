@@ -1,0 +1,54 @@
+#!/usr/bin/python
+from __future__ import division
+
+import roslib
+roslib.load_manifest('joystick_command')
+
+import rospy
+
+from sensor_msgs.msg import Joy
+from geometry_msgs.msg import Twist, TwistStamped, Vector3
+from std_msgs.msg import String
+
+rospy.init_node('joystick_command')
+
+
+max_linear_velocity = 30 #rospy.get_param('max_linear_velocity')
+max_angular_velocity = 30 #rospy.get_param('max_angular_velocity')
+pub = rospy.Publisher('/trajectory', TwistStamped)
+
+def process_joy_data_callback(data):
+	print "got one!"
+	linear_x = data.axes[0] * max_linear_velocity
+	linear_y = data.axes[1] * max_linear_velocity
+	angular_z = data.axes[2]# * max_angular_velocity
+	time_stamp = data.stamp
+	frame_id = data.frame_id
+	seq = data.seq
+
+	twist_stamped_msg = TwistStamped()
+	twist_stamped_msg.twist = Twist()
+	twist_stamped_msg.twist.linear = Vector3()
+	twist_stamped_msg.twist.angular = Vector3()
+
+	twist_stamped_msg.twist.linear.x = linear_x
+	twist_stamped_msg.twist.linear.y = linear_y
+	twist_stamped_msg.twist.linear.z = 0
+	
+	twist_stamped_msg.twist.angular.x = 0
+	twist_stamped_msg.twist.angular.y = 0
+	twist_stamped_msg.twist.angular.z = angular_z
+
+	twist_stamped_msg.header.seq = seq
+	twist_stamped_msg.header.frame_id = frame_id
+	twist_stamped_msg.header.stamp = time_stamp
+	pub.publish(twist_stamped_msg)
+
+
+	
+#	if __name__ == '__main__':
+#		init_joystick_command()
+
+rospy.Subscriber('/joy', Joy, process_joy_data_callback)
+rospy.spin()	
+
