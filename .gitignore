@@ -2,7 +2,7 @@ Debug/
 .d
 .o
 .idea
-.swp
+*.swp
 
 *~
 *.pyc
