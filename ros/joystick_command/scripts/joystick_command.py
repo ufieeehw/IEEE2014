@@ -14,9 +14,9 @@ rospy.init_node('joystick_command')
 
 
 def process_joy_data_callback(data):
-	linear_x = data.axes[0] * max_linear_velocity
-	linear_y = data.axes[1] * max_linear_velocity
-	angular_z = data.axes[3]# * max_angular_velocity
+	linear_x = data.axes[1] * max_linear_velocity
+	linear_y = data.axes[0] * max_linear_velocity
+	angular_z = data.axes[3] * max_angular_velocity
 	seq = data.header.seq
 
 	twist_stamped_msg = TwistStamped()
@@ -38,8 +38,8 @@ def process_joy_data_callback(data):
 	pub.publish(twist_stamped_msg)
 
 #These values are hardcoded for now.
-max_linear_velocity = 30 #rospy.get_param('max_linear_velocity')
-max_angular_velocity = 30 #rospy.get_param('max_angular_velocity')
+max_linear_velocity = 0.5 #rospy.get_param('max_linear_velocity')
+max_angular_velocity = 5 #rospy.get_param('max_angular_velocity')
 
 pub = rospy.Publisher('/trajectory', TwistStamped)
 rospy.Subscriber('/joy', Joy, process_joy_data_callback)
