@@ -145,11 +145,13 @@ def main():
 
     robot = Robot((0.1, 0.1), 0.1)
 
+    course_length = (97 - 3/4 * 2) * 0.0254
+    course_width = (49 - 3/4 * 2) * 0.0254
     course = [
-        Line((-1, 0.5), (1, 0.5)),
-        Line((1, 0.5), (1, -0.5)),
-        Line((1, -0.5), (-1, -0.5)),
-        Line((-1, -0.5), (-1, 0.5)),
+        Line((-course_length/2, +course_width/2), (+course_length/2, +course_width/2)),
+        Line((+course_length/2, +course_width/2), (+course_length/2, -course_width/2)),
+        Line((+course_length/2, -course_width/2), (-course_length/2, -course_width/2)),
+        Line((-course_length/2, -course_width/2), (-course_length/2, +course_width/2)),
         robot,
     ]
     
