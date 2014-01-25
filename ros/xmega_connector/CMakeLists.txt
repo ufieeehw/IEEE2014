@@ -56,6 +56,7 @@ add_service_files(
   FILES
   Echo.srv
   SetWheelSpeeds.srv
+  GetOdometry.srv
 #  Service2.srv
 )
 
