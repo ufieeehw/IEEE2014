@@ -2,19 +2,19 @@
 
 from __future__ import division
 
-import roslib
-roslib.load_manifest('xmega_connector')
-
 import threading
 import serial
 import rospy
 import math
+
+import numpy
 
 
 from std_msgs.msg import Header
 from xmega_connector.msg import XMEGAPacket
 from xmega_connector.srv import * #Echo, EchoRequest, EchoResponse
 from geometry_msgs.msg import TwistStamped, Twist, Vector3
+from tf import transformations
 
 rospy.init_node('xmega_connector', log_level=rospy.DEBUG)
 
@@ -140,22 +140,29 @@ def get_odometry_service(odo_req):
 	return service_response
 
 def trajectory_to_wheel_speeds(msg):
-	msg = TwistStamped()
+	width = 0.245
+	length = 0.160
+
+	wheels = [
+	    ((+length/2, -width/2, 0), (+1, +1, 0)), # front right
+	    ((+length/2, +width/2, 0), (+1, -1, 0)), # front left
+	    ((-length/2, -width/2, 0), (+1, -1, 0)), # rear right
+	    ((-length/2, +width/2, 0), (+1, +1, 0)), # rear left
+	]
+
+	wheel_diameter = 54e-3 # 54 mm
+	wheel_radius = wheel_diameter / 2
+
+	xyz_array = lambda o: numpy.array([o.x, o.y, o.z])
+
+	def get_vel_at_point(body_point):
+	    return xyz_array(msg.twist.linear) + numpy.cross(xyz_array(msg.twist.angular), body_point)
+
 	ws_req = SetWheelSpeedsRequest()
-
-	wheel_diameter = 54e-3  # wheel outside diameter is 54 mm
-	wheel_circumference = math.pi * wheel_diameter  # wheel circumference in meters
-
-	translational_magnitude = math.hypot(msg.twist.linear.x, msg.twist.linear.y)  # magnitude of translational velocity desired in meters/second
-	translational_angle = math.atan(msg.twist.linear.x/msg.twist.linear.y)  # angle of translational velocity desired in radians
-		# why is it x/y instead of y/x? because the angle we want is not from the x axis, but instead
-	translational_magnitude *= (2*math.pi)/(wheel_circumference)  #convert from meters/second to radians/second for the wheels
-
-	ws_req.wheel1 = translational_magnitude * math.sin(translational_angle + math.pi/4) + msg.twist.angular.z
-	ws_req.wheel2 = translational_magnitude * math.cos(translational_angle + math.pi/4) - msg.twist.angular.z
-	ws_req.wheel3 = translational_magnitude * math.cos(translational_angle + math.pi/4) - msg.twist.angular.z
-	ws_req.wheel4 = translational_magnitude * math.sin(translational_angle + math.pi/4) + msg.twist.angular.z
-
+	[ws_req.wheel1, ws_req.wheel2, ws_req.wheel3, ws_req.wheel4] = [
+		get_vel_at_point(wheel_pos).dot(transformations.unit_vector(wheel_dir)) / wheel_radius * math.sqrt(2)
+		for wheel_pos, wheel_dir in wheels]
+	
 	set_wheel_speed_service(ws_req)
 
 rospy.Service('~echo', Echo, echo_service)
