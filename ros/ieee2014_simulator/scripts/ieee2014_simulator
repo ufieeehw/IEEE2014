@@ -9,7 +9,9 @@ import pygame
 
 import rospy
 from xv11_driver.msg import LaserMeasurements
-from geometry_msgs.msg import TwistStamped
+from std_msgs.msg import Header
+from geometry_msgs.msg import TwistStamped, PoseStamped, Pose, Point, Quaternion
+from tf import transformations
 
 from ieee2014_simulator.vector import v, V
 
@@ -72,6 +74,8 @@ class Robot(object):
         def twist_cb(msg):
             self._set_velocity((msg.twist.linear.x, msg.twist.linear.y), msg.twist.angular.z)
         rospy.Subscriber('twist', TwistStamped, twist_cb)
+        
+        self.odom_pub = rospy.Publisher('odom', PoseStamped)
     
     def _set_velocity(self, vel, angvel):
         self.vel = V(vel)
@@ -122,6 +126,18 @@ class Robot(object):
             
             msg.ranges.append(dist)
             msg.intensities.append(1 if not math.isinf(dist) else 0)
+            
+            self.odom_pub.publish(PoseStamped(
+                header=Header(
+                    stamp=rospy.Time(self.t),
+                    frame_id='/last_odom',
+                ),
+                pose=Pose(
+                    position=Point(self.vel[0]*dt, self.vel[1]*dt, 0),
+                    orientation=Quaternion(*transformations.quaternion_from_euler(0, 0, self.angvel*dt)),
+                ),
+            ))
+                    
         
         if msg is not None:
             self.lidar_pub.publish(msg)
