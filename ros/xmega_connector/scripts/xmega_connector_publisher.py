@@ -161,7 +161,7 @@ def trajectory_to_wheel_speeds(msg):
 rospy.Service('~echo', Echo, echo_service)
 rospy.Service('~set_wheel_speeds', SetWheelSpeeds, set_wheel_speed_service)
 rospy.Service('~get_odometry', GetOdometry, get_odometry_service)
-rospy.Subscriber('/trajectory', TwistStamped, trajectory_to_wheel_speeds)
+rospy.Subscriber('/twist', TwistStamped, trajectory_to_wheel_speeds)
 
 while not rospy.is_shutdown():
 

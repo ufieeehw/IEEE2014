@@ -41,7 +41,7 @@ def process_joy_data_callback(data):
 max_linear_velocity = 0.5 #rospy.get_param('max_linear_velocity')
 max_angular_velocity = 5 #rospy.get_param('max_angular_velocity')
 
-pub = rospy.Publisher('/trajectory', TwistStamped)
+pub = rospy.Publisher('/twist', TwistStamped)
 rospy.Subscriber('/joy', Joy, process_joy_data_callback)
 
 rospy.spin()	
