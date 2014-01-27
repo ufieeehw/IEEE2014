@@ -1,0 +1,90 @@
+#!/usr/bin/env python
+
+from __future__ import division
+
+import math
+import time
+import random
+import threading
+import collections
+
+import numpy
+import pygame
+
+import rospy
+from xv11_driver.msg import LaserMeasurements
+from std_msgs.msg import Header
+from geometry_msgs.msg import TwistStamped, PoseStamped, Pose, Point, Quaternion, PoseArray
+from tf import transformations
+
+from ieee2014_localization.vector import v, V
+
+SCALE = 200
+def round_point((x, y)):
+    return int(SCALE*x+320+.5), int(SCALE*-y+240+.5)
+
+inf = 1e500
+assert math.isinf(inf)
+
+xyzw_array = lambda o: numpy.array([o.x, o.y, o.z, o.w])
+
+class Line(object):
+    def __init__(self, point1, point2):
+        self.point1 = point1
+        self.point2 = point2
+    
+    def draw(self, display):
+        pygame.draw.line(display, (255, 255, 255), round_point(self.point1), round_point(self.point2))
+
+class RobotParticle(object):
+    def __init__(self, position, angle):
+        self.position = V(position)
+        self.angle = angle
+    
+    @property
+    def forward_vector(self):
+        return v(math.cos(self.angle), math.sin(self.angle))
+    @property
+    def left_vector(self):
+        return v(math.cos(self.angle+math.pi/2), math.sin(self.angle+math.pi/2))
+    
+    def draw(self, display):
+        r = .05
+        pygame.draw.circle(display, (0, 255, 0), round_point(self.position), int(SCALE*r+.5))
+        pygame.draw.line(display, (0, 0, 255), round_point(self.position), round_point(self.position + r*self.forward_vector))
+
+def main():
+    rospy.init_node('ieee2014_particle_viewer')
+    
+    course_length = (97 - 3/4 * 2) * 0.0254
+    course_width = (49 - 3/4 * 2) * 0.0254
+    course = [
+        Line((-course_length/2, +course_width/2), (+course_length/2, +course_width/2)),
+        Line((+course_length/2, +course_width/2), (+course_length/2, -course_width/2)),
+        Line((+course_length/2, -course_width/2), (-course_length/2, -course_width/2)),
+        Line((-course_length/2, -course_width/2), (-course_length/2, +course_width/2)),
+    ]
+    
+    particles = [[]]
+    def update_particles(msg):
+        particles[0] = [RobotParticle((pose.position.x, pose.position.y), transformations.euler_from_quaternion(xyzw_array(pose.orientation))[2]) for pose in msg.poses]
+    rospy.Subscriber('particles', PoseArray, update_particles, queue_size=1)
+    
+    display = pygame.display.set_mode((640, 480))
+    def update_screen():
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return
+        
+        display.fill((0, 0, 0))
+        for obj in course:
+            obj.draw(display)
+        for particle in particles[0]:
+            particle.draw(display)
+        
+        pygame.display.update()
+    rospy.Timer(rospy.Duration(.1), lambda te: update_screen())
+
+    rospy.spin()
+
+main()
