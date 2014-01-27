@@ -76,7 +76,7 @@ class RobotParticle(object):
     def predict(self, odom_msg):
         self.position += self.forward_vector * odom_msg.pose.position.x + \
                          self.left_vector * odom_msg.pose.position.y
-        self.angle += odom_msg.pose.orientation.z * 2 # hackish, valid for small angles
+        self.angle += odom_msg.pose.orientation.z * (1 if odom_msg.pose.orientation.w > 0 else -1) * 2 # hackish, valid for small angles
         
         dt = 1/360/3
         self.position += v(
