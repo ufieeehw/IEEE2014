@@ -92,6 +92,11 @@ class Robot(object):
         self.ends = []
         msg = None
         
+        orig_position = self.position
+        orig_forward_vector = self.forward_vector
+        orig_left_vector = self.left_vector
+        orig_angle = self.angle
+        
         dt = 1/360/3
         while abs((self.t + dt) - t) < abs(self.t - t):
             self.t += dt
@@ -126,21 +131,25 @@ class Robot(object):
             
             msg.ranges.append(dist)
             msg.intensities.append(1 if not math.isinf(dist) else 0)
-            
-            self.odom_pub.publish(PoseStamped(
-                header=Header(
-                    stamp=rospy.Time(self.t),
-                    frame_id='/last_odom',
-                ),
-                pose=Pose(
-                    position=Point(self.vel[0]*dt, self.vel[1]*dt, 0),
-                    orientation=Quaternion(*transformations.quaternion_from_euler(0, 0, self.angvel*dt)),
-                ),
-            ))
-                    
+        
         
         if msg is not None:
             self.lidar_pub.publish(msg)
+        
+        self.odom_pub.publish(PoseStamped(
+            header=Header(
+                stamp=rospy.Time(self.t),
+                frame_id='/last_odom',
+            ),
+            pose=Pose(
+                position=Point(
+                    (self.position - orig_position) * orig_forward_vector,
+                    (self.position - orig_position) * orig_left_vector,
+                    0,
+                ),
+                orientation=Quaternion(*transformations.quaternion_from_euler(0, 0, self.angle - orig_angle)),
+            ),
+        ))
         
         self.laser_angle %= 2*math.pi
     
@@ -173,6 +182,7 @@ def main():
     
     display = pygame.display.set_mode((640, 480))
     
+    clock = pygame.time.Clock()
     while not rospy.is_shutdown():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -188,6 +198,8 @@ def main():
             obj.draw(display)
         
         pygame.display.update()
+        
+        clock.tick(60)
 
 
 main()
