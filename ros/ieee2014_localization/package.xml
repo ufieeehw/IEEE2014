@@ -40,6 +40,14 @@
   <!-- Use test_depend for packages you need only for testing: -->
   <!--   <test_depend>gtest</test_depend> -->
   <buildtool_depend>catkin</buildtool_depend>
+  <buildtool_depend>roscpp</buildtool_depend>
+  <run_depend>roscpp</run_depend>
+  <buildtool_depend>eigen_conversions</buildtool_depend>
+  <run_depend>eigen_conversions</run_depend>
+  <buildtool_depend>geometry_msgs</buildtool_depend>
+  <run_depend>geometry_msgs</run_depend>
+  <buildtool_depend>xv11_driver</buildtool_depend>
+  <run_depend>xv11_driver</run_depend>
 
 
   <!-- The export tag contains other, unspecified, tags -->
