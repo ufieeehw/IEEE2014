@@ -158,27 +158,32 @@ public:
         fake_normal_distribution(0, sqrt(.001*dt))(rng));
   }
   
-  double update(xv11_driver::LaserMeasurements const &lidar_msg, std::vector<std::unique_ptr<IObject> > const &course) const {
-    double laser_angle = lidar_msg.angle_min;
-    
+  double update(double lidar_angle, double range, std::vector<std::unique_ptr<IObject> > const &course) const {
     Vector2d start = position;
-    Vector2d direction = Vector2d(cos(angle + laser_angle), sin(angle + laser_angle));
+    Vector2d direction = Vector2d(cos(angle + lidar_angle), sin(angle + lidar_angle));
     
-    double dist = std::numeric_limits<double>::infinity();
+    double predicted_range = std::numeric_limits<double>::infinity();
     BOOST_FOREACH(std::unique_ptr<IObject> const &objp, course) {
-      dist = std::min(dist, objp->intersectWithRay(start, direction));
+      predicted_range = std::min(predicted_range, objp->intersectWithRay(start, direction));
     }
     
-    double measured = lidar_msg.ranges[0];
-    
-    if(!isinf(dist) && !isinf(measured)) {
-      return .1 + .9*exp(-pow(log(dist/measured), 2));
-    } else {
+    if(isinf(range) && !isinf(predicted_range)) {
       return .1;
+    } else if(!isinf(range) && isinf(predicted_range)) {
+      return .1;
+    } else if(isinf(range) && isinf(predicted_range)) {
+      return 1;
+    } else {
+      return .1 + .9*exp(-pow(log(range/predicted_range), 2));
     }
   }
 };
 
+struct LidarScan {
+  ros::Time stamp;
+  double angle;
+  double range;
+};
 
 class ParticleFilter {
   static unsigned int const N = 200;
@@ -199,7 +204,7 @@ public:
   }
   
   void update(geometry_msgs::PoseStamped const &odom,
-              std::vector<xv11_driver::LaserMeasurements> const &lidars,
+              std::vector<LidarScan> const &lidars,
               std::vector<std::unique_ptr<IObject> > const &course) {
     
     double dt = (odom.header.stamp - t).toSec();
@@ -214,10 +219,10 @@ public:
       RobotParticle tmp = particle;
       ros::Time tmp_t = t;
       double weight = 1;
-      BOOST_FOREACH(xv11_driver::LaserMeasurements const &lidar, lidars) {
-        tmp = tmp.predict((lidar.header.stamp - tmp_t).toSec(), v_and_omega.first, v_and_omega.second);
-        tmp_t = lidar.header.stamp;
-        weight *= tmp.update(lidar, course);
+      BOOST_FOREACH(LidarScan const &lidar, lidars) {
+        tmp = tmp.predict((lidar.stamp - tmp_t).toSec(), v_and_omega.first, v_and_omega.second);
+        tmp_t = lidar.stamp;
+        weight *= tmp.update(lidar.angle, lidar.range, course);
       }
       tmp = tmp.predict((odom.header.stamp - tmp_t).toSec(), v_and_omega.first, v_and_omega.second);
       tmp_t = odom.header.stamp;
@@ -288,7 +293,7 @@ class MessageHandling {
   ros::Publisher particles_pub;
   
   std::list<geometry_msgs::PoseStamped> odom_msgs;
-  std::list<xv11_driver::LaserMeasurements> lidar_msgs;
+  std::list<LidarScan> lidar_msgs;
   
   boost::optional<ParticleFilter> filter;
   
@@ -299,22 +304,35 @@ class MessageHandling {
   }
   
   void handle_lidar(xv11_driver::LaserMeasurements const &msg) {
-    // XXX should expand to one per ray
-    assert(lidar_msgs.empty() || msg.header.stamp > lidar_msgs.back().header.stamp);
-    lidar_msgs.push_back(msg);
+    assert(msg.time_increment >= 0);
+    for(int i = 0; i < msg.ranges.size(); i++) {
+      LidarScan single;
+      single.stamp = msg.header.stamp + ros::Duration(i * msg.time_increment);
+      single.angle = msg.angle_min + i * msg.angle_increment;
+      single.range = msg.ranges[i];
+      if(single.range < msg.range_min) {
+        continue;
+      }
+      if(single.range > msg.range_max) {
+        single.range = std::numeric_limits<double>::infinity();
+      }
+      
+      assert(lidar_msgs.empty() || single.stamp > lidar_msgs.back().stamp);
+      lidar_msgs.push_back(single);
+    }
     think();
   }
   
   void think() {
     // if there's an odom message with a lidar message following it
     while(!odom_msgs.empty() && !lidar_msgs.empty() &&
-          lidar_msgs.back().header.stamp > odom_msgs.front().header.stamp) {
+          lidar_msgs.back().stamp > odom_msgs.front().header.stamp) {
       {
         // pop the odom message and lidar messages before it, send with list of following lidar messages
         geometry_msgs::PoseStamped odom = odom_msgs.front(); odom_msgs.pop_front();
         
-        std::vector<xv11_driver::LaserMeasurements> lidars;
-        while(lidar_msgs.front().header.stamp < odom.header.stamp) {
+        std::vector<LidarScan> lidars;
+        while(lidar_msgs.front().stamp < odom.header.stamp) {
           lidars.push_back(lidar_msgs.front()); lidar_msgs.pop_front();
         }
         
@@ -329,7 +347,7 @@ class MessageHandling {
       {
         ParticleFilter tmp = *filter;
         BOOST_FOREACH(geometry_msgs::PoseStamped const &future_odom, odom_msgs) {
-          tmp.update(future_odom, std::vector<xv11_driver::LaserMeasurements>(), course);
+          tmp.update(future_odom, std::vector<LidarScan>(), course);
         }
         pose_pub.publish(tmp.getPose());
         particles_pub.publish(tmp.getParticles());
