@@ -37,7 +37,11 @@ typedef enum MessageTypes_enum {
 	EchoRequest = 0x02,
 	EchoReply = 0x03,
 	PIDsetSpeed = 0x04,
-	PIDgetOdometry = 0x05
+	PIDgetOdometry = 0x05,
+	PIDsetMultiplier = 0x06,
+	PIDgetMultiplier = 0x07,
+	PIDgetSpeed = 0x08,
+	TCSGetRawData = 0x09
 
 }MessageTypes_t;
 

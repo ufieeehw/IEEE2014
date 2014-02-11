@@ -14,17 +14,9 @@
 static TC0_t &pid_tick_timer = TCC0;
 #define PID_TICK_OVF TCC0_OVF_vect
 
-static PORT_t &wheelPort1 = PORTE;
-static TC0_t &wheel1Timer = TCE0;
-static TC1_t &wheel2Timer = TCE1;
-static PORT_t &wheelPort2 = PORTD;
-static TC0_t &wheel3Timer = TCD0;
-static TC1_t &wheel4Timer = TCD1;
+static PORT_t &wheelPort1 = PORTA; // Originally PORTE
+static PORT_t &wheelPort2 = PORTB; // Originally PORTD
 
-#define PID_Wheel1_Event_Channel EVSYS_CHMUX_PORTE_PIN0_gc
-#define PID_Wheel2_Event_Channel EVSYS_CHMUX_PORTE_PIN1_gc
-#define PID_Wheel3_Event_Channel EVSYS_CHMUX_PORTD_PIN0_gc
-#define PID_Wheel4_Event_Channel EVSYS_CHMUX_PORTD_PIN1_gc
 
 // Multipliers
 // (xTicks/10ms)(1000ms/1sec)(1rev/464ticks)(2piRad/1rev) = blah
@@ -132,6 +124,10 @@ void pid_setSpeed(float speed, wheelNum num) {
 	data.setpoint = speed;
 }
 
+/*******************************************************************
+-----> Handler Functions <-----
+*******************************************************************/
+
 // Handler that sets wheel speeds based on message.
 // Arguments:
 //	message := [Wheel1B0, Wheel1B1, Wheel1B2, Wheel1B3, ... ,  Wheel4B0, Wheel4B1, Wheel4B2, Wheel4B3] 
@@ -141,33 +137,44 @@ void pid_setSpeed(float speed, wheelNum num) {
 void pid_set_speed_handler(char* message, uint8_t len) {
 	cli();
 
-	for(int i = 0; i < 4; i++)
-		pid_setSpeed(uart_int32_to_float(&message[4*i]), (wheelNum)i);
+	for(int i = 0; i < 4; i++) pid_setSpeed(uart_int32_to_float(&message[4*i]), (wheelNum)i);
 	
 	sei();
 }
 
-static uint32_t* pid_get_odometry(uint32_t* returnData) {
+void pid_get_speed_handler(char* message, uint8_t len) {
+	char wheelSpeeds[16];
+	
+	uart_float_to_char32((char*)&wheelSpeeds[0], pid_getSpeed(WHEEL1));
+	uart_float_to_char32((char*)&wheelSpeeds[4], pid_getSpeed(WHEEL2));
+	uart_float_to_char32((char*)&wheelSpeeds[8], pid_getSpeed(WHEEL3));
+	uart_float_to_char32((char*)&wheelSpeeds[12], pid_getSpeed(WHEEL4));
+	
+	uart_send_msg_block(PIDgetSpeed, wheelSpeeds, 17);
+}
+
+static void pid_get_odometry(int32_t* returnData) {
 	for(int i = 0; i < 4; i++) {
 		returnData[i] = wheelData[i].odometry_ticks;
 		wheelData[i].odometry_ticks = 0;
 	}
-	return returnData;
 }
 
 void pid_get_odometry_handler(char* message, uint8_t len) {
+
 	char odometry[16];
-	uint32_t wheelOdometry[4];
+	int32_t wheelOdometry[4];
 	pid_get_odometry(wheelOdometry);
 	
 	for(int i = 0; i < 4; i++) {
-		odometry[i*4  ] = (char)((wheelOdometry[i] >> 24) & 0xFF);
-		odometry[i*4+1] = (char)((wheelOdometry[i] >> 16) & 0xFF);
-		odometry[i*4+2] = (char)((wheelOdometry[i] >> 8)  & 0xFF);
-		odometry[i*4+3] = (char)((wheelOdometry[i])       & 0xFF);
+			odometry[4*i  ] = (char)((wheelOdometry[i]      ) & 0xFF);
+			odometry[4*i+1] = (char)((wheelOdometry[i] >> 8 ) & 0xFF);
+			odometry[4*i+2] = (char)((wheelOdometry[i] >> 16) & 0xFF);
+			odometry[4*i+3] = (char)((wheelOdometry[i] >> 24) & 0xFF);
 	}
 
 	uart_send_msg_block(PIDgetOdometry, odometry, 17);
+
 }
 
 static inline void pid_set_speed_multiplier(float val) {
@@ -180,14 +187,14 @@ static inline float pid_get_speed_multiplier() {
 
 // Because the multiplier is a floating point value, we'll multiply it by 1000 first, and then send it.
 // Or, if we're recieving it, we'll divide it by 1000.
-void pid_get_speed_multiplier_handler(char* messsage, uint8_t len) {
-	
+void pid_get_speed_multiplier_handler(char* message, uint8_t len) {
+	char multiplier[2];
+	uart_float_to_char16(multiplier, pid_get_speed_multiplier());
+	uart_send_msg_block(PIDgetMultiplier, multiplier, 3);
 }
 
-void pid_set_speed_multiplier_handler(char* messsage, uint8_t len) {
-	for(int i = 0; i < len; i++) {
-		
-	}
+void pid_set_speed_multiplier_handler(char* message, uint8_t len) {
+	pid_set_speed_multiplier(uart_int16_to_float(message));
 }
 
 
@@ -216,7 +223,7 @@ unsigned int grayToBinary(unsigned int num)
 	return num;
 }
 
-ISR(PORTE_INT0_vect){
+ISR(PORTA_INT0_vect){
 	// pins 0 and 2
 	static int8_t old_value = 0;
 	int8_t new_value = grayToBinary(((wheelPort1.IN & 4) >> 1) | (wheelPort1.IN & 1));
@@ -231,7 +238,7 @@ ISR(PORTE_INT0_vect){
 	
 }
 
-ISR(PORTE_INT1_vect){
+ISR(PORTA_INT1_vect){
 	
 	// pins 1 and 3
 	static int8_t old_value = 0;
@@ -246,7 +253,7 @@ ISR(PORTE_INT1_vect){
 	old_value = new_value;
 }
 
-ISR(PORTD_INT0_vect){
+ISR(PORTB_INT0_vect){
 	// pins 0 and 2
 	static int8_t old_value = 0;
 	int8_t new_value = grayToBinary(((wheelPort2.IN & 4) >> 1) | (wheelPort2.IN & 1));
@@ -260,7 +267,7 @@ ISR(PORTD_INT0_vect){
 	old_value = new_value;
 }
 
-ISR(PORTD_INT1_vect){
+ISR(PORTB_INT1_vect){
 	// pins 1 and 3
 	static int8_t old_value = 0;
 	int8_t new_value = grayToBinary(((wheelPort2.IN & 8) >> 1) | (wheelPort2.IN & 2));

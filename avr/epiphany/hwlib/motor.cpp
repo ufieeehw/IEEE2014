@@ -87,5 +87,5 @@ void motor_set_velocity(MotorNum motor_num, float velocity) {
 	}
 	float speed = fabs(velocity);
 	if(speed >= 1023) speed = 1023;
-	motor_set_effort(motor_num, speed);
+	motor_set_effort(motor_num, (uint16_t)speed);
 }

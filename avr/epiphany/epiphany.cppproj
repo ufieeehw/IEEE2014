@@ -22,7 +22,7 @@
     <eraseonlaunchrule>0</eraseonlaunchrule>
     <AsfVersion>3.5.1</AsfVersion>
     <avrtoolinterface>JTAG</avrtoolinterface>
-    <avrtool>com.atmel.avrdbg.tool.jtagicemk3</avrtool>
+    <avrtool>com.atmel.avrdbg.tool.simulator</avrtool>
     <com_atmel_avrdbg_tool_avrdragon>
       <ToolType>com.atmel.avrdbg.tool.avrdragon</ToolType>
       <ToolName>AVR Dragon</ToolName>
@@ -77,6 +77,12 @@
         <port>49178</port>
         <ssl>False</ssl>
       </Channel>
+      <ToolOptions>
+        <InterfaceProperties>
+          <JtagEnableExtResetOnStartSession>false</JtagEnableExtResetOnStartSession>
+        </InterfaceProperties>
+        <InterfaceName>JTAG</InterfaceName>
+      </ToolOptions>
     </com_atmel_avrdbg_tool_simulator>
     <UncachedRange />
     <BootSegment>2</BootSegment>
@@ -94,7 +100,7 @@
       <ToolOptions>
         <InterfaceName>JTAG</InterfaceName>
         <InterfaceProperties>
-          <JtagDbgClock>7500000</JtagDbgClock>
+          <JtagDbgClock>0</JtagDbgClock>
           <SwdClock>249000</SwdClock>
           <JtagProgClock>7500000</JtagProgClock>
           <IspClock>125000</IspClock>
@@ -109,6 +115,18 @@
         </InterfaceProperties>
       </ToolOptions>
     </com_atmel_avrdbg_tool_jtagicemk3>
+    <com_atmel_avrdbg_tool_jtagice3plus>
+      <ToolOptions>
+        <InterfaceProperties>
+          <JtagEnableExtResetOnStartSession>false</JtagEnableExtResetOnStartSession>
+          <JtagDbgClock>0</JtagDbgClock>
+        </InterfaceProperties>
+        <InterfaceName>JTAG</InterfaceName>
+      </ToolOptions>
+      <ToolType>com.atmel.avrdbg.tool.jtagice3plus</ToolType>
+      <ToolNumber>J30200025822</ToolNumber>
+      <ToolName>JTAGICE3</ToolName>
+    </com_atmel_avrdbg_tool_jtagice3plus>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
     <ToolchainSettings>

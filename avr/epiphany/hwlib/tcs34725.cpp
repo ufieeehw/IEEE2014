@@ -6,6 +6,7 @@
  */ 
 
 #include "tcs34725.h"
+#include "uart.h"
 
 static bool _tcs34725Initialised;
 static tcs34725Gain_t _tcs34725Gain;
@@ -26,10 +27,6 @@ static uint16_t read16(uint8_t reg){
 	
 	return ( ((uint16_t)high << 8) | (uint16_t) low );
 }
-
-
-
-
 
 
 bool tcs_init(void){
@@ -157,6 +154,16 @@ void tcs_setInterrupt(bool i) {
 		r &= ~TCS34725_ENABLE_AIEN;
 	}
 	write8(TCS34725_ENABLE, r);
+}
+
+void tcs_get_raw_data_handler(char* messsag, uint8_t len) {
+	char buffer[8];
+	uint16_t colorVals[4];
+	tcs_getRawData(&colorVals[0], &colorVals[1], &colorVals[2], &colorVals[3]);
+	for(int i = 0; i < 4; i++)
+		for(int j = 0; j < 2; j++)
+			buffer[i+j] = ((colorVals[i] >> 8*j) & 0xFF);
+	uart_send_msg_block(TCSGetRawData, buffer, 9);
 }
 
 /* TODO: implement once we can write a raw byte using TWI

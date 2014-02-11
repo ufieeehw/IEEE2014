@@ -217,11 +217,14 @@ void uart_echo_reply(char* message, uint8_t len) {
 }
 
 float uart_int32_to_float(char* data) {
-	int32_t haxor32 = (int32_t)(data[3] << 24 | data[2] << 16 | data[1] << 8 | data[0]);
-	float flaxor = (float)(haxor32)/1000.0;
+	int32_t haxor32 = (static_cast<uint32_t>(data[3]) << 24) |
+	                           (static_cast<uint32_t>(data[2]) << 16) |
+							   (static_cast<uint32_t>(data[1]) <<  8) |
+							   (static_cast<uint32_t>(data[0]) <<  0);
+	float flaxor = (float)(haxor32/1000.0);
 	return flaxor;
 }
-
+// Redo the functions in here to reflect the one above.
 float uart_int16_to_float(char* data) {
 	int16_t haxor16 = (int16_t)(data[1] << 8 | data[0]);
 	float flaxor = (float)(haxor16)/1000.0;
@@ -235,23 +238,26 @@ float uart_int8_to_float(char* data) {
 }
 
 void uart_float_to_char32(char* buffer, float data) {
-	int32_t haxor32 = data*1000;
-	for(int i = 0; i < 3; i++){
-		buffer[i] = (char)((haxor32 >> i*8) & 0x000F);
-	}
+	int32_t haxor32 = (int32_t)(data*1000);
+
+	buffer[0] = (char)((haxor32     ) & 0xFF);
+	buffer[1] = (char)((haxor32 >> 8) & 0xFF);
+	buffer[2] = (char)((haxor32 >> 16) & 0xFF);
+	buffer[3] = (char)((haxor32 >> 24) & 0xFF);
+	
 }
 
 void uart_float_to_char16(char* buffer, float data) {
 	int16_t haxor16 = data*1000;
 	for(int i = 0; i < 2; i++){
-		buffer[i] = (char)((haxor16 >> i*8) & 0x0F);
+		buffer[i] = (char)((haxor16 >> i*8) & 0x00FF);
 	}
 }
 
 void uart_float_to_char8(char* buffer, float data) {
 	int8_t haxor8 = data*1000;
 	for(int i = 0; i < 1; i++){
-		buffer[i] = (char)((haxor8 >> i*8) & 0xF);
+		buffer[i] = (char)((haxor8 >> i*8) & 0xFF);
 	}
 }
 

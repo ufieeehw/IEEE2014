@@ -94,5 +94,6 @@ void tcs_getRawData(uint16_t *r, uint16_t *g, uint16_t *b, uint16_t *c);
 uint16_t tcs_calculateColorTemperature(uint16_t r, uint16_t g, uint16_t b);
 uint16_t tcs_calculateLux(uint16_t r, uint16_t g, uint16_t b);
 void tcs_setInterrupt(bool i);
+void tcs_get_raw_data_handler(char* message, uint8_t len);
 
 #endif /* TCS34725_H_ */

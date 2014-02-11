@@ -15,16 +15,21 @@
 #include "clock.h"
 #include "twi.h"
 #include "mpu6050.h"
+#include "tcs34725.h"
 
 
 typedef void (*HandlerPointer)(char*, uint8_t);
-extern HandlerPointer HandlerPointers[6] = {
+extern HandlerPointer HandlerPointers[10] = {
 	NULL,						// 0x00 AckValid
 	NULL,						// 0x01 AckInvalid
 	uart_echo_request,			// 0x02
 	uart_echo_reply,			// 0x03
 	pid_set_speed_handler,		// 0x04
-	pid_get_odometry_handler	// 0x05
+	pid_get_odometry_handler,	// 0x05
+	pid_set_speed_multiplier_handler, // 0x06
+	pid_get_speed_multiplier_handler, // 0x07
+	pid_get_speed_handler,		// 0x08
+	tcs_get_raw_data_handler	// 0x09
 };
 
 
