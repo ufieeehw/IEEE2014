@@ -13,10 +13,10 @@ import numpy
 from std_msgs.msg import Header
 from xmega_connector.msg import XMEGAPacket
 from xmega_connector.srv import * #Echo, EchoRequest, EchoResponse
-from geometry_msgs.msg import TwistStamped, Twist, Vector3
+from geometry_msgs.msg import TwistStamped, Twist, Vector3, PoseStamped, Pose, Point, Quaternion
 from tf import transformations
 
-rospy.init_node('xmega_connector', log_level=rospy.DEBUG)
+rospy.init_node('xmega_connector')#, log_level=rospy.DEBUG)
 
 class XMEGAConnector(object):
 
@@ -127,36 +127,38 @@ def get_odometry_service(odo_req):
 	connector_object.send_packet(packet)
 
 	response_packet = connector_object.read_packet()
-	wheel1, wheel2, wheel3, wheel4 = struct.unpack(">llll", response_packet.msg_body)
+	wheel1, wheel2, wheel3, wheel4 = struct.unpack("<iiii", response_packet.msg_body)
 	connector_object.send_ack()
 
 	service_response = GetOdometryResponse()
-	service_response.wheel1 = wheel1
-	service_response.wheel2 = wheel2
-	service_response.wheel3 = wheel3
-	service_response.wheel4 = wheel4
+	service_response.wheel1 = wheel1/1000.
+	service_response.wheel2 = wheel2/1000.
+	service_response.wheel3 = wheel3/1000.
+	service_response.wheel4 = wheel4/1000.
 	xmega_lock.release()
 
 	return service_response
 
+
+width = 0.245
+length = 0.160
+
+wheels = [
+	((+length/2, -width/2, 0), (+1, +1, 0)), # front right
+	((+length/2, +width/2, 0), (+1, -1, 0)), # front left
+	((-length/2, -width/2, 0), (+1, -1, 0)), # rear right
+	((-length/2, +width/2, 0), (+1, +1, 0)), # rear left
+]
+
+wheel_diameter = 54e-3 # 54 mm
+wheel_radius = wheel_diameter / 2
+
+xyz_array = lambda o: numpy.array([o.x, o.y, o.z])
+
 def trajectory_to_wheel_speeds(msg):
-	width = 0.245
-	length = 0.160
-
-	wheels = [
-	    ((+length/2, -width/2, 0), (+1, +1, 0)), # front right
-	    ((+length/2, +width/2, 0), (+1, -1, 0)), # front left
-	    ((-length/2, -width/2, 0), (+1, -1, 0)), # rear right
-	    ((-length/2, +width/2, 0), (+1, +1, 0)), # rear left
-	]
-
-	wheel_diameter = 54e-3 # 54 mm
-	wheel_radius = wheel_diameter / 2
-
-	xyz_array = lambda o: numpy.array([o.x, o.y, o.z])
 
 	def get_vel_at_point(body_point):
-	    return xyz_array(msg.twist.linear) + numpy.cross(xyz_array(msg.twist.angular), body_point)
+		return xyz_array(msg.twist.linear) + numpy.cross(xyz_array(msg.twist.angular), body_point)
 
 	ws_req = SetWheelSpeedsRequest()
 	[ws_req.wheel1, ws_req.wheel2, ws_req.wheel3, ws_req.wheel4] = [
@@ -169,10 +171,73 @@ rospy.Service('~echo', Echo, echo_service)
 rospy.Service('~set_wheel_speeds', SetWheelSpeeds, set_wheel_speed_service)
 rospy.Service('~get_odometry', GetOdometry, get_odometry_service)
 rospy.Subscriber('/twist', TwistStamped, trajectory_to_wheel_speeds)
+odom_pub = rospy.Publisher('odom', PoseStamped)
 
+def sinc(x):
+    if abs(x) < 1e-6:
+        return 1 - x*x/6 + x*x*x*x/120
+    return math.sin(x) / x
+def cosm1c(x):
+    if abs(x) < 1e-6:
+        return -x/2 + x*x*x/24 - x*x*x*x*x/720;
+    return (math.cos(x) - 1) / x
+def drive_mat(omega, dt):
+    return numpy.array([
+        [sinc(dt*omega), cosm1c(dt*omega)],
+        [-cosm1c(dt*omega), sinc(dt*omega)],
+    ]) * dt
+def drive(v, omega, dt):
+    dp = drive_mat(omega, dt).dot(v)
+    dtheta = dt * omega
+    return dp, dtheta
+def undrive(dp, dtheta, dt):
+    assert dt != 0
+    omega = dtheta/dt
+    v = numpy.linalg.inv(drive_mat(omega, dt)).dot(dp)
+    return v, omega
+
+last_odom_time = None
 while not rospy.is_shutdown():
+	rospy.sleep(rospy.Duration(0.05))
+	odom = get_odometry_service(None)
+	stamp = rospy.Time.now()
+	
+	
+	if last_odom_time is None:
+		last_odom_time = stamp
+		continue
+	dt = (stamp - last_odom_time).to_sec()
+	last_odom_time = stamp
+	#print dt
+	
+	A = []
+	b = []
+	def get_vel_at_point(vel, angvel, body_point):
+		assert len(vel) == 2
+		return numpy.array([vel[0], vel[1], 0]) + numpy.cross(numpy.array([0, 0, angvel]), body_point)
+	for i, (wheel_pos, wheel_dir) in enumerate(wheels):
+		A.append([
+			get_vel_at_point([1, 0], 0, wheel_pos).dot(transformations.unit_vector(wheel_dir)) / wheel_radius * math.sqrt(2),
+			get_vel_at_point([0, 1], 0, wheel_pos).dot(transformations.unit_vector(wheel_dir)) / wheel_radius * math.sqrt(2),
+			get_vel_at_point([0, 0], 1, wheel_pos).dot(transformations.unit_vector(wheel_dir)) / wheel_radius * math.sqrt(2),
+		])
+		
+		b.append(getattr(odom, "wheel%i" % (i+1,))/dt)
+	x, residuals, rank, s = numpy.linalg.lstsq(A, b)
 
-	rospy.spin()
+	vel = x[0:2]
+	angvel = x[2]
 
-
-
+	#print vel, angvel
+	dp, dtheta = drive(vel, angvel, dt)
+	
+	odom_pub.publish(PoseStamped(
+		header=Header(
+			stamp=stamp,
+			frame_id='/last_odom',
+		),
+		pose=Pose(
+			position=Point(dp[0], dp[1], 0),
+			orientation=Quaternion(*transformations.quaternion_from_euler(0, 0, dtheta)),
+		),
+	))

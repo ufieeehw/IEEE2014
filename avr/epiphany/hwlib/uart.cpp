@@ -1,5 +1,6 @@
 #include "uart.h"
 #include <stdlib.h>
+#include <math.h>
 
 
 // Configuration Values
@@ -238,12 +239,17 @@ float uart_int8_to_float(char* data) {
 }
 
 void uart_float_to_char32(char* buffer, float data) {
-	int32_t haxor32 = (int32_t)(data*1000);
+	int32_t haxor32 = roundf(data*1000.);
+	uint32_t tmp = static_cast<uint32_t>(haxor32);
+	buffer[0] = tmp >> 0;
+	buffer[1] = tmp >> 8;
+	buffer[2] = tmp >> 16;
+	buffer[3] = tmp >> 24;
 
-	buffer[0] = (char)((haxor32     ) & 0xFF);
+	/*buffer[0] = (char)((haxor32     ) & 0xFF);
 	buffer[1] = (char)((haxor32 >> 8) & 0xFF);
 	buffer[2] = (char)((haxor32 >> 16) & 0xFF);
-	buffer[3] = (char)((haxor32 >> 24) & 0xFF);
+	buffer[3] = (char)((haxor32 >> 24) & 0xFF);*/
 	
 }
 

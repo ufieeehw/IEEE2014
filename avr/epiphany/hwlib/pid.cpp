@@ -5,10 +5,11 @@
 #include <stdlib.h>
 #include <math.h>
 #include "uart.h"
+#include "../init.h"
 
-#define constP 30
-#define constI 1
-#define constD 0.1
+#define constP 120
+#define constI 4000
+#define constD 0.0004
 
 // Configuration Values
 static TC0_t &pid_tick_timer = TCC0;
@@ -18,12 +19,8 @@ static PORT_t &wheelPort1 = PORTA; // Originally PORTE
 static PORT_t &wheelPort2 = PORTB; // Originally PORTD
 
 
-// Multipliers
-// (xTicks/10ms)(1000ms/1sec)(1rev/464ticks)(2piRad/1rev) = blah
-static float TICKS_TO_RAD_MULTIPLIER = (1/464.0)*(2*M_PI);
-static const uint16_t pid_tick_timer_period = 5000; //Will generate an interrupt every 1ms
-static const int sampleTimeMs = 10;
-static const float max_wheel_speed = 70.0;
+static float radPerTick = (2*M_PI)/1856.0;
+static const float sampleTime = 10e-3;
 
 
 // File-Scope Variables and Structures
@@ -33,13 +30,13 @@ struct pid_wheel_data {
 	
 	// Values for measuring the speed of the wheel
 	volatile float AVG_speed = 0;
-	volatile int individual_ticks = 0;
-	volatile int ticks = 0;
+	volatile int32_t ticks = 0;
 	
 	// Values for the actual pid controller
 	float input = 0, output = 0, setpoint = 0, errSum = 0, lastErr = 0, kp = 0, ki = 0, kd = 0;
-	
-	int32_t odometry_ticks = 0;
+
+	int32_t pid_last_ticks = 0;
+	int32_t odometry_last_ticks = 0;
 } ;
 
 static pid_wheel_data wheelData[4];
@@ -69,7 +66,7 @@ void pid_init() {
 	pid_tick_timer.CTRLC = 0x00;
 	pid_tick_timer.CTRLD = 0x00;
 	pid_tick_timer.CTRLE = 0x00;
-	pid_tick_timer.PER = pid_tick_timer_period;
+	pid_tick_timer.PER = round(F_CPU * sampleTime / 64.);
 	pid_tick_timer.INTCTRLA = TC_OVFINTLVL_LO_gc;
 	
 	pid_setTunings(constP, constI, constD, WHEEL1);
@@ -87,6 +84,12 @@ static void pid_compute(wheelNum num) {
 	data.errSum += error;
 	float dErr = (error - data.lastErr);
 	
+	if(data.ki * data.errSum >= 1024) {
+		data.errSum = 1024/data.ki;
+	} else if(data.ki * data.errSum <= -1024) {
+		data.errSum = -1024/data.ki;
+	}
+	
 	//Compute the output
 	data.output = (data.kp * error) + (data.ki * data.errSum) + (data.kd * dErr);
 	
@@ -96,22 +99,21 @@ static void pid_compute(wheelNum num) {
 
 void pid_setTunings(float Kp, float Ki, float Kd, wheelNum num) {
 	pid_wheel_data &data = wheelData[num];
-	float sampleTimeInSec = ((float)sampleTimeMs);
 	data.kp = Kp;
-	data.ki = Ki*sampleTimeInSec;
-	data.kd = Kd/sampleTimeInSec;
+	data.ki = Ki*sampleTime;
+	data.kd = Kd/sampleTime;
 }
 
 static void pid_measureSpeed(wheelNum num) {
 	pid_wheel_data &data = wheelData[num];
 	
 	cli();
-	data.ticks = data.individual_ticks;
-	data.individual_ticks = 0;
+	int32_t ticks = data.ticks;
 	sei();
 	
-	data.odometry_ticks += data.ticks;
-	data.AVG_speed = data.ticks*TICKS_TO_RAD_MULTIPLIER/10e-3;
+	data.AVG_speed = (ticks - data.pid_last_ticks)*radPerTick/sampleTime;
+	
+	data.pid_last_ticks = ticks;
 }
 
 float pid_getSpeed(wheelNum num) {
@@ -153,24 +155,32 @@ void pid_get_speed_handler(char* message, uint8_t len) {
 	uart_send_msg_block(PIDgetSpeed, wheelSpeeds, 17);
 }
 
-static void pid_get_odometry(int32_t* returnData) {
+
+static void pid_get_odometry(float* returnData) {
 	for(int i = 0; i < 4; i++) {
-		returnData[i] = wheelData[i].odometry_ticks;
-		wheelData[i].odometry_ticks = 0;
+		pid_wheel_data &data = wheelData[i];
+		
+		cli();
+		int32_t ticks = data.ticks;
+		sei();
+		
+		volatile int32_t tmp = ticks - data.odometry_last_ticks;
+		volatile float tmp2 = tmp * radPerTick;
+		
+		returnData[i] = tmp2;
+		
+		data.odometry_last_ticks = ticks;
 	}
 }
 
 void pid_get_odometry_handler(char* message, uint8_t len) {
 
 	char odometry[16];
-	int32_t wheelOdometry[4];
+	float wheelOdometry[4];
 	pid_get_odometry(wheelOdometry);
 	
 	for(int i = 0; i < 4; i++) {
-			odometry[4*i  ] = (char)((wheelOdometry[i]      ) & 0xFF);
-			odometry[4*i+1] = (char)((wheelOdometry[i] >> 8 ) & 0xFF);
-			odometry[4*i+2] = (char)((wheelOdometry[i] >> 16) & 0xFF);
-			odometry[4*i+3] = (char)((wheelOdometry[i] >> 24) & 0xFF);
+		uart_float_to_char32(odometry+i*4, wheelOdometry[i]);
 	}
 
 	uart_send_msg_block(PIDgetOdometry, odometry, 17);
@@ -178,11 +188,11 @@ void pid_get_odometry_handler(char* message, uint8_t len) {
 }
 
 static inline void pid_set_speed_multiplier(float val) {
-	TICKS_TO_RAD_MULTIPLIER = val;
+	radPerTick = val;
 }
 
 static inline float pid_get_speed_multiplier() {
-	return TICKS_TO_RAD_MULTIPLIER;
+	return radPerTick;
 }
 
 // Because the multiplier is a floating point value, we'll multiply it by 1000 first, and then send it.
@@ -232,7 +242,7 @@ ISR(PORTA_INT0_vect){
 	if(difference > 2) difference -= 4;
 	if(difference < -2) difference += 4;
 	
-	wheelData[0].individual_ticks += difference;
+	wheelData[0].ticks += difference;
 	
 	old_value = new_value;
 	
@@ -248,7 +258,7 @@ ISR(PORTA_INT1_vect){
 	if(difference > 2) difference -= 4;
 	if(difference < -2) difference += 4;
 	
-	wheelData[1].individual_ticks += difference;
+	wheelData[1].ticks += difference;
 	
 	old_value = new_value;
 }
@@ -262,7 +272,7 @@ ISR(PORTB_INT0_vect){
 	if(difference > 2) difference -= 4;
 	if(difference < -2) difference += 4;
 		
-	wheelData[2].individual_ticks += difference;
+	wheelData[2].ticks += difference;
 		
 	old_value = new_value;
 }
@@ -276,7 +286,7 @@ ISR(PORTB_INT1_vect){
 	if(difference > 2) difference -= 4;
 	if(difference < -2) difference += 4;
 	
-	wheelData[3].individual_ticks += difference;
+	wheelData[3].ticks += difference;
 	
 	old_value = new_value;
 }
