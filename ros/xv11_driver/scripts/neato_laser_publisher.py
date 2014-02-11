@@ -51,7 +51,8 @@ class xv11Driver(object):
 				msg.angle_min = (index * 4)*(math.pi/180.0)
 				msg.angle_max = (index * 4 + 3)*(math.pi/180.0)
 				msg.angle_increment = 4.0*(math.pi/180.0)
-				msg.time_increment = ((60.0/360.0)*(64.0/speed))
+				#msg.time_increment = ((60.0/360.0)*(64.0/speed))
+                                msg.time_increment = 1e-6
 				msg.range_min = 0.06
 				msg.range_max = 5.0
 				return msg
