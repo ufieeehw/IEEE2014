@@ -1,0 +1,26 @@
+Wheel Documentation
+	Wire Colors:
+		Black: Motor VCC
+		White: Motor GND
+		
+		Gray: 	GND
+		Purple:	VCC
+		Blue:	Encoder A
+		Green:	Encoder B
+		
+	Motor1&2 Block Outer: Wheel1
+	Motor1&2 Block Inner: Wheel2
+	Motor3&4 Block Outer: Wheel3
+	Motor3&4 Block Inner: Wheel4
+	
+	PortA0: Wheel1EncoderA, EncoderVCC, EncoderGND
+	PortA1: Wheel2EncoderA, EncoderVCC, EncoderGND
+	PortA2: Wheel1EncoderB
+	PortA3: Wheel2EncoderB
+	
+	PortB0: Wheel3EncoderA, EncoderVCC, EncoderGND
+	PortB1: Wheel4EncoderA, EncoderVCC, EncoderGND
+	PortB2: Wheel3EncoderB
+	PortB3: Wheel4EncoderB
+
+	
