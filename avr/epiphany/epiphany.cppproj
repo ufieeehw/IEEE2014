@@ -196,12 +196,6 @@
     <Folder Include="hwlib\" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="hwlib\adc.cpp">
-      <SubType>compile</SubType>
-    </Compile>
-    <Compile Include="hwlib\adc.h">
-      <SubType>compile</SubType>
-    </Compile>
     <Compile Include="hwlib\clock.cpp">
       <SubType>compile</SubType>
     </Compile>
