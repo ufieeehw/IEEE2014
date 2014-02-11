@@ -1,99 +1,129 @@
 import serial
 import struct
-ser = serial.Serial('/dev/ttyUSB0', 19200, timeout=1)
-print ser.name
+import time
 
-def echoText():
-	text = raw_input("Enter Text to be echoed: ")
-	text = '^^^' + chr( len(text + chr(2)) )+ chr(2) + text + '\0'
-	hexStr = text.encode("hex")
+class msgTypes(object):
+	ACKValid = chr(0)
+	ACKInvalid = chr(1)
+	EchoRequest = chr(2)
+	EchoReply = chr(3)
+	PIDsetSpeed = chr(4)
+	PIDgetOdometry = chr(5)
+	PIDsetMultiplier = chr(6)
+	PIDgetMultiplier = chr(7)
+	PIDgetSpeed = chr(8)
+	TCSGetRawData = chr(9)
 
-	print hexStr
-	ser.write(text)
 
-	textback = ser.read(100)
-	hexStrBack = textback.encode("hex")
-	print hexStrBack
-	print textback
-#	print ser.read(20)
-#	ser.read(3)
-#	length = int(ser.read())
-#	messageType = int(ser.read())
-#	message = ser.read(length - 1)
+class xmegaTester(object):
+
+	def __init__(self):
+		self.ser = serial.Serial('/dev/ttyUSB0', 19200, timeout=1)
+		print self.ser.name
+		self.msgType = msgTypes()
+
+	def sendMsg(self, msgType, msgLen, msg):
+		messageToSend = '^^^' + chr(msgLen + 1) + msgType + msg + '\0'
+		self.ser.write(messageToSend)
+
+	def readMsg(self):
+		self.ser.read(3)
+		msg_len = ord(self.ser.read())
+		msg_type = self.ser.read()
+		msg = ''
+		for i in range(0, msg_len - 1):
+			msg += self.ser.read()
+		self.sendAck()
+		return msg
+
+	def sendAck(self):
+		self.sendMsg(self.msgType.ACKValid, 0, '')
 	
-#	print message
+	def echo(self):
+		temp = raw_input("Enter text to be echoed: ")
+		print "sent: \t\t", temp.encode("hex"), ' ', temp
+		self.sendMsg(self.msgType.EchoRequest, len(temp), temp)
+		ret_msg = self.readMsg()
+		print "recieved: \t",  ret_msg.encode("hex"), ' ', ret_msg
+		return
 	
-	returnText = '^^^' + chr(1) + chr(0)
-	ser.write(returnText)
+	def setWheelSpeeds(self):
+		wheelStruct = ''
+		wheel1 = int(float( raw_input("Wheel1: ")) * 1000.0)
+		wheel2 = int(float( raw_input("Wheel2: ")) * 1000.0)
+		wheel3 = int(float( raw_input("wheel3: ")) * 1000.0)
+		wheel4 = int(float( raw_input("wheel4: ")) * 1000.0)
 
-	return
+		print wheel1, '\t', wheel2, '\t', wheel3, '\t', wheel4
 
-def sendAck():
-	returnText = '^^^' + chr(1) + chr(0)
-	ser.write(returnText)
-	return
+		print hex(wheel1), '\t', hex(wheel2), '\t', hex(wheel3), '\t', hex(wheel4)
+		wheelStruct = struct.pack('<llll', wheel1,wheel2,wheel3,wheel4)
+		
+		self.sendMsg(self.msgType.PIDsetSpeed, len(wheelStruct), wheelStruct)
+		return
 
-def setWheelSpeeds():
-	wheelStruct = ''
-	wheel1 = int(float( raw_input("Wheel1: ")) * 1000.0)
-	wheel2 = int(float( raw_input("Wheel2: ")) * 1000.0)
-	wheel3 = int(float( raw_input("wheel3: ")) * 1000.0)
-	wheel4 = int(float( raw_input("wheel4: ")) * 1000.0)
+	def getWheelSpeeds(self, loop):
+		while True:
+			self.sendMsg(self.msgType.PIDgetSpeed, 0, '')
+			temp = self.readMsg()
+			wheel1, wheel2, wheel3, wheel4 = struct.unpack("<llll", temp)
+			
+			wheel1 /= 1000.0
+			wheel2 /= 1000.0
+			wheel3 /= 1000.0
+			wheel4 /= 1000.0
+			print wheel1, '\t', wheel2, '\t', wheel3, '\t', wheel4
+			time.sleep(.2)
+			if loop is not True: break
+		return
 
-	print "ws trans: ",  wheel1, " ", wheel2, ' ', wheel3, ' ', wheel4
+	def getOdometry(self, loop):
+  		while True:
+			self.sendMsg(self.msgType.PIDgetOdometry, 0, '')
+			vals = self.readMsg()
+			wheel1, wheel2, wheel3, wheel4 = struct.unpack("<llll", vals)
+			print wheel1, '\t', wheel2, '\t', wheel3, '\t', wheel4
+			if loop is not True:
+				break
+		return
 
-	print hex(wheel1), ' ', hex(wheel2), ' ', hex(wheel3), ' ', hex(wheel4)
-	wheelStruct = struct.pack('<llll', wheel1,wheel2,wheel3,wheel4)
+	def helpCommands(self):
+		print "Here are a list of commands thus far to run: \n"
+		print "a: send ack message"
+		print "ws: send a new set of wheel speeds"
+		print "gwss: get a single reading of the wheel speeds"
+		print "gwsl: begin reading wheel speeds in loop"
+		print "ods: get single odometry reading"
+		print "odl: begin reading odometry in loop"
+		print "e: A command which will simply echo out the text that was entered."
+		print "q: exit the program"
+		return
 
-	test = '^^^' + chr(len(wheelStruct + chr(4))) + chr(4) + wheelStruct + '\0'
-	hexStr = test.encode("hex")
 
-	print hexStr
-	print test
-
-	ser.write(test)
-
-	return
-
-def getOdometry():
-  while True:
-	message = '^^^' + chr(1)+ chr(5)+ '\0'
-	#print message.encode("hex")
-
-	ser.write(message)
-#	raw_input("waiting")
-	ser.read(5)
-	vals = ser.read(16)
-#	print vals.encode("hex")
-	wheel1, wheel2, wheel3, wheel4 = struct.unpack(">llll", vals)
-	print wheel1, ' ', wheel2, ' ', wheel3, ' ', wheel4
-
-	sendAck()
-
-	#return
-
-def helpCommands():
-	print "Here are a list of commands thus far to run: \n"
-	print "echoText: A command which will simply echo out the text that was entered.\n"
-	print "quit: exit the program"
-	return
+xm = xmegaTester()
 
 while True:
 
 	command = raw_input("Type a command\n")
 	
-	if command == "echo":
-		echoText()
-	elif command == "help":
-		helpCommands()
-	elif command == 'quit':
+	if command == "e":
+		xm.echo()
+	elif command == "h":
+		xm.helpCommands()
+	elif command == 'q':
 		break
 	elif command == 'ack':
-		sendAck()
+		xm.sendAck()
 	elif command == 'ws':
-		setWheelSpeeds()
-	elif command == 'od':
-		getOdometry()
+		xm.setWheelSpeeds()
+	elif command == 'odl':
+		xm.getOdometry(True)
+	elif command == 'ods':
+		xm.getOdometry(False)
+	elif command == 'gwss':
+		xm.getWheelSpeeds(False)
+	elif command == 'gwsl':
+		xm.getWheelSpeeds(True)
 	else:
 		print "That's not a legal command.\n"
 
