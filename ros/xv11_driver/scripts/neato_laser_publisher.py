@@ -103,7 +103,11 @@ while not rospy.is_shutdown():
 	lmp_msg = laser_object.read_packet()
 	lsp_msg = laser_scan_generator.generate_packet(lmp_msg)
 	
-	lmp.publish(lmp_msg)
-	if lsp_msg is not None:
-		lsp.publish(lsp_msg)
+	try:
+		lmp.publish(lmp_msg)
+		if lsp_msg is not None:
+			lsp.publish(lsp_msg)
+	except:
+		import traceback
+		traceback.print_exc()
 
