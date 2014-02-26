@@ -1,0 +1,70 @@
+#!/usr/bin/python
+
+import math
+import time
+
+import numpy
+
+import rospy
+from std_msgs.msg import Header
+from geometry_msgs.msg import PoseStamped, Twist, Vector3, TwistStamped
+from tf import transformations
+
+rospy.init_node('controller')
+
+xyzw_array = lambda o: numpy.array([o.x, o.y, o.z, o.w])
+def angle_diff(a, b):
+    return (a - b + math.pi) % (2*math.pi) - math.pi
+def unit_vector(v):
+    if numpy.linalg.norm(v) == 0: return v
+    return numpy.array(v)/numpy.linalg.norm(v)
+def sign(x):
+    if x > 0: return 1
+    elif x < 0: return -1
+    else: return 0
+
+pub = rospy.Publisher('twist', TwistStamped)
+
+max_linear_acc = 1
+max_linear_vel = 1
+
+max_angular_acc = 1
+max_angular_vel = 1
+
+def got_pose(msg):
+    desired_position = numpy.array(
+        [+1, +0.5] if time.time() % 20 < 5 else
+        [+1, -0.5] if time.time() % 20 < 10 else
+        [-1, -0.5] if time.time() % 20 < 15 else
+        [-1, +0.5])
+    desired_yaw = 0
+    
+    position = numpy.array([msg.pose.position.x, msg.pose.position.y])
+    yaw = transformations.euler_from_quaternion(xyzw_array(msg.pose.orientation))[2]
+    print position, yaw
+    
+    position_error = desired_position - position
+    angle_error = angle_diff(desired_yaw, yaw)
+    
+    linear_speed = min(math.sqrt(2 * numpy.linalg.norm(position_error) * max_linear_acc), max_linear_vel)
+    angular_speed = min(math.sqrt(2 * abs(angle_error) * max_angular_acc), max_angular_vel)
+    
+    desired_vel = linear_speed * unit_vector(position_error)
+    desired_angvel = angular_speed * sign(angle_error)
+    
+    forward = numpy.array([math.cos(yaw), math.sin(yaw)])
+    left = numpy.array([math.cos(yaw+math.pi/2), math.sin(yaw+math.pi/2)])
+    
+    pub.publish(TwistStamped(
+        header=Header(
+            stamp=rospy.Time.now(),
+            frame_id='/base_link',
+        ),
+        twist=Twist(
+            linear=Vector3(forward.dot(desired_vel), left.dot(desired_vel), 0),
+            angular=Vector3(0, 0, desired_angvel),
+        ),
+    ))
+rospy.Subscriber('pose', PoseStamped, got_pose)
+
+rospy.spin()
