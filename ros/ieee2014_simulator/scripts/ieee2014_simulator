@@ -76,6 +76,8 @@ class Robot(object):
         rospy.Subscriber('twist', TwistStamped, twist_cb)
         
         self.odom_pub = rospy.Publisher('odom', PoseStamped)
+        
+        self.sim_pose_pub = rospy.Publisher('sim_pose', PoseStamped)
     
     def _set_velocity(self, vel, angvel):
         self.vel = V(vel)
@@ -148,6 +150,17 @@ class Robot(object):
                     0,
                 ),
                 orientation=Quaternion(*transformations.quaternion_from_euler(0, 0, self.angle - orig_angle)),
+            ),
+        ))
+        
+        self.sim_pose_pub.publish(PoseStamped(
+            header=Header(
+                stamp=rospy.Time(self.t),
+                frame_id='/course',
+            ),
+            pose=Pose(
+                position=Point(self.position[0], self.position[1], 0),
+                orientation=Quaternion(*transformations.quaternion_from_euler(0, 0, self.angle)),
             ),
         ))
         
