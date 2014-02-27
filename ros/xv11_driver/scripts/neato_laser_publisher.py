@@ -32,6 +32,7 @@ class xv11Driver(object):
   			if len(data) == 22:
 				start, index, speed, data0, data1, data2, data3, checksum = struct.unpack('<BBH4s4s4s4sH', data)
 				index -= 0xA0
+				index = (index + 45) % 90
 				msg = LaserMeasurements()
 				msg.ranges = []
 				msg.intensities = []
