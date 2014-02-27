@@ -140,14 +140,15 @@ def get_odometry_service(odo_req):
 	return service_response
 
 
-width = 0.245
-length = 0.160
+INCH = 25.4e-3
+width =  9.345*INCH
+length = 8.119*INCH
 
 wheels = [
-	((+length/2, -width/2, 0), (+1, +1, 0)), # front right
-	((+length/2, +width/2, 0), (+1, -1, 0)), # front left
 	((-length/2, -width/2, 0), (+1, -1, 0)), # rear right
 	((-length/2, +width/2, 0), (+1, +1, 0)), # rear left
+	((+length/2, -width/2, 0), (+1, +1, 0)), # front right
+	((+length/2, +width/2, 0), (+1, -1, 0)), # front left
 ]
 
 wheel_diameter = 54e-3 # 54 mm
