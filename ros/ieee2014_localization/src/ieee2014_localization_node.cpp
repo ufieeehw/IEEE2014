@@ -167,12 +167,8 @@ public:
       predicted_range = std::min(predicted_range, objp->intersectWithRay(start, direction));
     }
     
-    if(isinf(range) && !isinf(predicted_range)) {
+    if(isinf(predicted_range)) {
       return .1;
-    } else if(!isinf(range) && isinf(predicted_range)) {
-      return .1;
-    } else if(isinf(range) && isinf(predicted_range)) {
-      return 1;
     } else {
       return .1 + .9*exp(-pow(log(range/predicted_range), 2));
     }
@@ -310,11 +306,8 @@ class MessageHandling {
       single.stamp = msg.header.stamp + ros::Duration(i * msg.time_increment);
       single.angle = msg.angle_min + i * msg.angle_increment;
       single.range = msg.ranges[i];
-      if(single.range < msg.range_min) {
+      if(single.range < msg.range_min || single.range > msg.range_max) {
         continue;
-      }
-      if(single.range > msg.range_max) {
-        single.range = std::numeric_limits<double>::infinity();
       }
       
       assert(lidar_msgs.empty() || single.stamp > lidar_msgs.back().stamp);
