@@ -22,6 +22,8 @@ from ieee2014_localization.vector import v, V
 SCALE = 200
 def round_point((x, y)):
     return int(SCALE*x+320+.5), int(SCALE*-y+240+.5)
+def reverse_point((x, y)):
+    return (x-320)/SCALE, -(y-240)/SCALE
 
 inf = 1e500
 assert math.isinf(inf)
@@ -70,11 +72,26 @@ def main():
         particles[0] = [RobotParticle((pose.position.x, pose.position.y), transformations.euler_from_quaternion(xyzw_array(pose.orientation))[2]) for pose in msg.poses]
     rospy.Subscriber('particles', PoseArray, update_particles, queue_size=1)
     
+    desired_pose_pub = rospy.Publisher('desired_pose', PoseStamped)
+    
+    
     display = pygame.display.set_mode((640, 480))
     def update_screen():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 return
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                pos = reverse_point(event.pos)
+                desired_pose_pub.publish(PoseStamped(
+                    header=Header(
+                        stamp=rospy.Time.now(),
+                        frame_id='/course',
+                    ),
+                    pose=Pose(
+                        position=Point(pos[0], pos[1], 0),
+                        orientation=Quaternion(0, 0, 0, 1),
+                    ),
+                ))
         
         display.fill((0, 0, 0))
         for obj in course:

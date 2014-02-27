@@ -25,18 +25,30 @@ def sign(x):
 
 pub = rospy.Publisher('twist', TwistStamped)
 
-max_linear_acc = 1
 max_linear_vel = 1
+max_linear_acc = max_linear_vel/.5
 
-max_angular_acc = 1
-max_angular_vel = 1
+max_angular_vel = 4
+max_angular_acc = max_angular_vel/.5
+
+desired_position = numpy.array([0, 0])
+desired_yaw = 0
+def got_desired_pose_msg(msg):
+    global desired_position, desired_yaw
+    desired_position = numpy.array([msg.pose.position.x, msg.pose.position.y])
+    desired_yaw = transformations.euler_from_quaternion(xyzw_array(msg.pose.orientation))[2]
+rospy.Subscriber('desired_pose', PoseStamped, got_desired_pose_msg)
 
 def got_pose(msg):
-    desired_position = numpy.array(
-        [+1, +0.5] if time.time() % 20 < 5 else
-        [+1, -0.5] if time.time() % 20 < 10 else
-        [-1, -0.5] if time.time() % 20 < 15 else
-        [-1, +0.5])
+    #desired_position = numpy.array(
+    #    [+0.5, +0.25] if time.time() % 20 < 5 else
+    #    [+0.5, -0.25] if time.time() % 20 < 10 else
+    #    [-0.5, -0.25] if time.time() % 20 < 15 else
+    #    [-0.5, +0.25])
+    #desired_position = numpy.array(
+    #    [+.32, -.11] if time.time() % 4 < 2 else
+    #    [1.03, .34])
+    #desired_position = numpy.array([0, 0])
     desired_yaw = 0
     
     position = numpy.array([msg.pose.position.x, msg.pose.position.y])
@@ -51,6 +63,11 @@ def got_pose(msg):
     
     desired_vel = linear_speed * unit_vector(position_error)
     desired_angvel = angular_speed * sign(angle_error)
+    
+    if numpy.linalg.norm(position_error) < 0.05:
+        desired_vel *= numpy.linalg.norm(position_error)/0.05
+    if abs(angle_error) < 0.05:
+        desired_angvel *= abs(angle_error)/0.05
     
     forward = numpy.array([math.cos(yaw), math.sin(yaw)])
     left = numpy.array([math.cos(yaw+math.pi/2), math.sin(yaw+math.pi/2)])

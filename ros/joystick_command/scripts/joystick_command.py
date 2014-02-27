@@ -38,8 +38,8 @@ def process_joy_data_callback(data):
 	pub.publish(twist_stamped_msg)
 
 #These values are hardcoded for now.
-max_linear_velocity = 0.5 #rospy.get_param('max_linear_velocity')
-max_angular_velocity = 5 #rospy.get_param('max_angular_velocity')
+max_linear_velocity = 1 #rospy.get_param('max_linear_velocity')
+max_angular_velocity = 4 #rospy.get_param('max_angular_velocity')
 
 pub = rospy.Publisher('/twist', TwistStamped)
 rospy.Subscriber('/joy', Joy, process_joy_data_callback)
