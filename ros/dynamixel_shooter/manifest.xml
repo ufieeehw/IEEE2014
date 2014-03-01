@@ -1,0 +1,15 @@
+<package>
+  <description brief="dynamixel_shooter">
+
+     dynamixel_shooter
+
+  </description>
+  <author>Khaled Hassan</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/dynamixel_shooter</url>
+  <depend package="dynamixel_controllers"/>
+
+</package>
+
+
