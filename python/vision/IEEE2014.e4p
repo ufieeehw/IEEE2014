@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE Project SYSTEM "Project-4.6.dtd">
+<!-- eric4 project file for project IEEE2014 -->
+<!-- Saved: 2014-02-20, 17:09:01 -->
+<!-- Copyright (C) 2014 Jacob Panikulam, jpanikulam@ufl.edu -->
+<Project version="4.6">
+  <Language></Language>
+  <ProgLanguage mixed="0">Python</ProgLanguage>
+  <ProjectType>Console</ProjectType>
+  <Description>Controls, Autonomy and Machine Vision for the University of Florida IEEE Autonomous Robotics Team, 2014 SoutheastCon, at University of Kentucky</Description>
+  <Version>0.1</Version>
+  <Author>Jacob Panikulam</Author>
+  <Email>jpanikulam@ufl.edu</Email>
+  <Sources>
+    <Source>RectDetect.py</Source>
+    <Source>Implementation/__init__.py</Source>
+    <Source>Test/CornetTest.py</Source>
+    <Source>Test/JacobIsGreat.py</Source>
+    <Source>Test/CornerTest.py</Source>
+    <Source>Test/CVTestBed.py</Source>
+    <Source>IEEE2014Functions/jIEEE2014.py</Source>
+    <Source>IEEE2014Functions/__init__.py</Source>
+    <Source>__init__.py</Source>
+    <Source>ContourTest.py</Source>
+    <Source>CVTestBed.py</Source>
+    <Source>backgroundEliminator.py</Source>
+  </Sources>
+  <Forms>
+  </Forms>
+  <Translations>
+  </Translations>
+  <Resources>
+  </Resources>
+  <Interfaces>
+  </Interfaces>
+  <Others>
+  </Others>
+  <MainScript>RectDetect.py</MainScript>
+  <Vcs>
+    <VcsType>None</VcsType>
+  </Vcs>
+  <FiletypeAssociations>
+    <FiletypeAssociation pattern="*.pyw" type="SOURCES" />
+    <FiletypeAssociation pattern="*.idl" type="INTERFACES" />
+    <FiletypeAssociation pattern="*.py" type="SOURCES" />
+    <FiletypeAssociation pattern="*.ptl" type="SOURCES" />
+  </FiletypeAssociations>
+</Project>
