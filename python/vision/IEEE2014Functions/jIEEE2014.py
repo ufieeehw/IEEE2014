@@ -1,5 +1,8 @@
 import cv2
 import numpy as np
+
+##This is garbage, don't use it. - Jake
+
 ##TODO:
 #Optimize --
 # - Port mathy, timesuck functions (perp, segIntersect) to C++, use boost.python
