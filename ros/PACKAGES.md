@@ -1,5 +1,5 @@
 Necessary packages to install
 
-ros-groovy-eigen-conversions
-libboost-random-dev
-libboost-random1.46.1 (version important?)
+1. ros-groovy-eigen-conversions
+2. libboost-random-dev
+3. libboost-random1.48 or higher (version important: boost/random/uniform_real_distribution was added in 1.47)
