@@ -10,7 +10,7 @@ def nothing(x):
 
 
 #Notable parameters
-cameraHeight = 10.0 #inches
+cameraHeight = 8.5 #inches
 cameraAzimuth = 0.0 #Rads Relative to robot
 cameraAltitude = 0.0 #Rads relative to robot
 focal = 2.54 #in/in
@@ -41,7 +41,8 @@ cv2.createTrackbar('Th3','Frame',200,3000,nothing)
 #img = cv2.imread('./Implementation/myalgo2099447.jpg')
 #img = cv2.imread('./Implementation/CoursePracticeMarch2.png')
 img = cv2.imread('./Implementation/IEEEcourseMarch2-2.png')
-cropped = img[img.shape[0]*0.45:img.shape[0],:]
+#cropped = img[img.shape[0]*0.45:img.shape[0],:]
+cropped = img
 cleanedImage = cv2.GaussianBlur(cropped, (3,3), sigmaX = 1, sigmaY = 1)
 
 
@@ -110,27 +111,32 @@ while(True):
 	#(0,img.shape[0])
 
 	dispimg = cv2.pyrUp(cv2.pyrUp(cleanedImage))
-	cv2.circle(cleanedImage, (cleanedImage.shape[1]*2,cleanedImage.shape[0]*2), 10, (255,0,255),thickness = -1)
-	center = (img.shape[0]/2, img.shape[1]/2)
+	cv2.circle(dispimg, (cleanedImage.shape[1]*2,cleanedImage.shape[0]*2), 10, (255,0,100),thickness = -1)
+	center = np.array([img.shape[1]/2, img.shape[0]/2 ]) #(Xh, Yh)
 	dispcenter = (cleanedImage.shape[1]/2, cleanedImage.shape[0]/2)
 	for com in centerofMass:
 		cx = com[0]
 		cy = com[1]
-
+		F[cy,cx] = (0,0,0)
+		cxy = np.array([cx,cy],np.float32)
+		imxy = (center - cxy)/center
+		
 		#Center of image is the origin
-		xim = ( cx - (img.shape[1]/2.0) )/(img.shape[1]/2.0)
-		yim = ( (img.shape[0] - cy) - (img.shape[0]/2.0) )/(img.shape[0]/2.0)
 
-		cv2.line(cleanedImage, center, (int(cx),int(cy)), (255,255,0))
-		#print xim, yim
-		distanceHoriz = -cameraHeight*(focal/yim)
-		relativeX = (distanceHoriz*xim)/focal
-		#cv2.putText(dispimg, str(xim)+ ', ' +str(yim), (cx*4, cy*4), cv2.FONT_HERSHEY_PLAIN, 0.8, (0,0,255), thickness=1)
+		#cv2.line(cleanedImage, center, (int(cx),int(cy)), (255,255,0))
+		xim = imxy[0]
+		yim = imxy[1]
+		
+		distanceHoriz = -cameraHeight*(focal/yim)/1.13
+		relativeX = ((distanceHoriz*xim)/focal)*1.7
+		cv2.putText(dispimg, str(cx)+ ', ' +str(cy), (cx*4 + 10, cy*4 + 10), cv2.FONT_HERSHEY_PLAIN, 0.8, (180,20,180), thickness=1)
+		#cv2.putText(dispimg, str(imxy[0])+ ', ' +str(imxy[1]), (cx*4, cy*4), cv2.FONT_HERSHEY_PLAIN, 0.8, (0,0,255), thickness=1)
 		cv2.putText(dispimg, str(distanceHoriz)+ ', ' +str(relativeX), (cx*4, cy*4), cv2.FONT_HERSHEY_PLAIN, 0.8, (0,0,255), thickness=1)
+	#cv2.imshow('F',F)
 	cv2.imshow('Display',dispimg)
 
-	cv2.imshow('Show',bkelim)
-	cv2.imshow('F',F)
+	#cv2.imshow('Show',bkelim)
+	
 	if cv2.waitKey(1) & 0xFF == ord('q'):
 		break
 cv2.destroyAllWindows()
