@@ -1,0 +1,170 @@
+#include <ros/ros.h>
+#include <ros/console.h>
+
+
+#include <boost/asio/serial_port.hpp>
+#include <boost/asio/basic_serial_port.hpp>
+#include <boost/asio/read.hpp>
+#include <boost/math/constants/constants.hpp>
+
+
+#include <xv11_driver/LaserMeasurements.h>
+#include <sensor_msgs/LaserScan.h>
+
+std::string frame_id, port_name;
+
+/*
+ class XV11Serial {
+ boost::asio::io_service io_serv;
+ boost::asio::serial_port port;
+
+ public:
+ XV11Serial() :
+ io_serv(io_serv), port(io_serv, "/dev/ttyUSB0") {
+
+ boost::asio::serial_port_base::baud_rate baud(115200);
+ boost::asio::serial_port_base::character_size character_size(8);
+ boost::asio::serial_port_base::flow_control flow_control(
+ boost::asio::serial_port_base::flow_control::none);
+ boost::asio::serial_port_base::parity parity(
+ boost::asio::serial_port_base::parity::none);
+ boost::asio::serial_port_base::stop_bits stop_bits(
+ boost::asio::serial_port_base::stop_bits::one);
+ port.set_option(baud);
+ port.set_option(character_size);
+ port.set_option(flow_control);
+ port.set_option(parity);
+ port.set_option(stop_bits);
+ }
+
+ };
+ */
+
+class XV11Driver {
+private:
+
+	typedef struct {
+		uint16_t distance;
+		uint16_t strength;
+		bool invalid_data;
+		bool strength_warning;
+	} subdata_t;
+
+	boost::asio::io_service io_serv;
+	boost::asio::serial_port port;
+
+	ros::NodeHandle nh;
+
+public:
+	XV11Driver(ros::NodeHandle& nh, std::string port_name) :
+			nh(nh), port(io_serv, port_name) {
+
+		boost::asio::serial_port_base::baud_rate baud(115200);
+		boost::asio::serial_port_base::character_size character_size(8);
+		boost::asio::serial_port_base::flow_control flow_control(
+				boost::asio::serial_port_base::flow_control::none);
+		boost::asio::serial_port_base::parity parity(
+				boost::asio::serial_port_base::parity::none);
+		boost::asio::serial_port_base::stop_bits stop_bits(
+				boost::asio::serial_port_base::stop_bits::one);
+		port.set_option(baud);
+		port.set_option(character_size);
+		port.set_option(flow_control);
+		port.set_option(parity);
+		port.set_option(stop_bits);
+	}
+
+	xv11_driver::LaserMeasurements read_packet(void) {
+		std::vector<char> data(23);
+
+		while (true) {
+			char byte;
+			boost::asio::read(port, boost::asio::buffer(&byte, 1));
+			data.push_back(byte);
+
+			if(data[0] != 0xfa){
+				data.clear();
+				continue;
+			}
+
+			if(data.size() == 22){
+				uint8_t start = data[0];
+				uint8_t index = data[1];
+				uint16_t speed = (data[3] << 8) | (data[2]);
+				subdata_t subdata[4];
+				for(int i=0; i<3; i++){
+					subdata[i].distance = (data[4 + (4*i) + 1] << 8) | data[4 + (4*i) + 0];
+					subdata[i].strength = (data[4 + (4*i) + 3] << 8) | data[4 + (4*i) + 2];
+					subdata[i].invalid_data = ((subdata[i].distance & 0x8000) != 0);
+					subdata[i].strength_warning = ((subdata[i].distance & 0x4000) != 0);
+					subdata[i].distance &= ~(0x8000 | 0x4000);
+				}
+
+				uint16_t checksum = (data[21] << 8) | data[20];
+
+				// if checksum is bad, go cry
+
+				xv11_driver::LaserMeasurements msg;
+
+				msg.header.stamp = ros::Time::now();
+				msg.packet_index = index;
+				msg.angle_min = (index * 4) * (boost::math::constants::pi<double>() / 180.0);
+				msg.angle_max = (index * 4 + 3) * (boost::math::constants::pi<double>() / 180.0);
+				msg.angle_increment = 4.0 * (boost::math::constants::pi<double>() / 180.0);
+				msg.time_increment = 1e-6;
+				msg.range_min = 0.06;
+				msg.range_max = 5.0;
+
+				return msg;
+			}
+
+		}//while
+
+	}
+
+};
+
+class LaserScanGenerator {
+
+public:
+	LaserScanGenerator() {
+	}
+
+};
+
+int main(int argc, char **argv) {
+	ros::init(argc, argv, "xv11_driver");
+
+	ros::NodeHandle nh("~");
+
+	if (nh.hasParam("frame_id")) {
+		nh.getParam("frame_id", frame_id);
+	} else {
+		ROS_ERROR("Must include _frame_id parameter!");
+		return -1;
+	}
+
+	if (nh.hasParam("port")) {
+		nh.getParam("port", port_name);
+	} else {
+		ROS_ERROR("Must include _port parameter!");
+		return -1;
+	}
+
+	XV11Driver laser_object(nh, port_name);
+
+	ros::Publisher lmp = nh.advertise<xv11_driver::LaserMeasurements>(
+			"laser_measurements", 1000);
+	ros::Publisher lsp = nh.advertise<sensor_msgs::LaserScan>("laser_scan",
+			1000);
+
+	xv11_driver::LaserMeasurements lmp_msg; // = xv11_driver::LaserMeasurements();
+	sensor_msgs::LaserScan lsp_msg; // = sensor_msgs::LaserScan();
+
+	while (ros::ok()) {
+		lmp_msg = laser_object.read_packet();
+		lmp.publish(lmp_msg);
+	}
+
+	ros::spin();
+}

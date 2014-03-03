@@ -6,13 +6,14 @@ project(xv11_driver)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   rospy
+  roscpp
   std_msgs
   message_generation
   sensor_msgs
 )
 
 ## System dependencies are found with CMake's conventions
-# find_package(Boost REQUIRED COMPONENTS system)
+find_package(Boost REQUIRED COMPONENTS system)
 
 
 ## Uncomment this if the package has a setup.py. This macro ensures
@@ -83,7 +84,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES xv11_driver
-  CATKIN_DEPENDS message_runtime rospy std_msgs sensor_msgs
+  CATKIN_DEPENDS message_runtime rospy roscpp std_msgs sensor_msgs
 #  DEPENDS system_lib
 )
 
@@ -104,16 +105,17 @@ include_directories(
 # )
 
 ## Declare a cpp executable
-# add_executable(xv11_driver_node src/xv11_driver_node.cpp)
+add_executable(xv11_driver_node src/xv11_driver_node.cpp)
+set_target_properties(xv11_driver_node PROPERTIES COMPILE_FLAGS -std=c++0x) ## copied from the ieee2014_localization CMakeLists.txt
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
-# add_dependencies(xv11_driver_node xv11_driver_generate_messages_cpp)
+add_dependencies(xv11_driver_node xv11_driver_generate_messages_cpp)
 
 ## Specify libraries to link a library or executable target against
-# target_link_libraries(xv11_driver_node
-#   ${catkin_LIBRARIES}
-# )
+target_link_libraries(xv11_driver_node
+  ${catkin_LIBRARIES}
+)
 
 #############
 ## Install ##
