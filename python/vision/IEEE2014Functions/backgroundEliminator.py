@@ -4,14 +4,82 @@ import numpy as np
 from matplotlib import pyplot as plt
 def nothing(x):
 	pass
+def unit_vector(vector):
+	return np.array(vector / np.linalg.norm(vector),np.float32)
+
+def angle_between(v1, v2 ,origin):
+	
+	v1_u = unit_vector(v1-origin)
+	v2_u = unit_vector(v2-origin)
+	
+	dot = np.dot(v1_u, v2_u)
+	angle = None
+	if(dot >=0 and dot <= 1):
+		angle = np.arccos(dot)
+
+	if angle == None:
+		if (v1_u == v2_u).all():
+			return 0.0
+		else:
+			return np.pi
+	return angle
+	
+def discoverSquares(image,canny1=64,canny2=31, discrim1 = 2.0, dicrim2 =3.0):
+	#in this color plane plane:
+	thresh_level = 2
+	finalContours = []
+	dilateKernel = np.ones((5,5),np.uint8)
+	edges = None
+	contours = None
+	#Eventually: Scan through possibilities and pick the best
+	for l in range(thresh_level):
+		if l == 0:
+			#edges = cv2.Canny(image, canny1, canny2, apertureSize = 3)
+			#dilated = cv2.dilate(edges, dilateKernel, iterations = 1,anchor = (-1,-1))
+			pass
+		else:
+			#edges = image >= ( (l+1)*255 )/thresh_level
+			edges = image
+		
+	contours,hierarchy = cv2.findContours(np.array(edges,np.uint8), cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+	
+	dispimg = np.array(np.zeros((image.shape[0],image.shape[1],3)),np.uint8)
+	for ctr in contours:
+		arcLen = cv2.arcLength(ctr,True)
+		if arcLen > 0.1:
+			approx = cv2.approxPolyDP(ctr,arcLen*(th4/500.0), True)
+
+			#cv2.putText(dispimg, str(len(approx)), (cx*4, cy*4), cv2.FONT_HERSHEY_PLAIN, 0.8, (0,0,255), thickness=1)
+			#cv2.drawContours(dispimg,approx,-1, (100,200,50))
+	
+	
+			if len(approx)>=4:# and cv2.isContourConvex(approx): #&&np.fabs(cv2.contourArea(approx)) > 1000
+				maxCos = 0
+				sumAngle = 0
+				#cv2.drawContours(dispimg,approx,-1, (50,80,200))
+				for j in range(2,len(approx)):
+					angle = angle_between(approx[j%len(approx)][0], approx[j-2][0], approx[j-1][0])
+					cosine = np.fabs(angle)
+					maxCos = max(maxCos,cosine)
+					sumAngle += angle
+				#Is the cosine summation between ~2pi+ and ~2pi-?
+				#if maxCos > 1.5 and maxCos < 1.6:
+				if sumAngle > 3 or sumAngle < 4:
+					cv2.drawContours(dispimg,[approx],-1,(255,0,100))
+					finalContours.append(approx)
+					
+	return dispimg, finalContours
 def eliminateBackground(image):
+
 	##TODO: Add a discriminator
 	#0: Blue Blocks
 	#1: White Lines
 	#2: Black Background (Decent - Don't rely on it)
 	
 	HSVimage = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-	blue_lower=np.array([100,66,147],np.uint8)
+
+	
+	blue_lower=np.array([100,66,109],np.uint8)
 	blue_upper=np.array([140,255,255],np.uint8)
 	blue=cv2.inRange(HSVimage,blue_lower,blue_upper)
 	#Isolation of low-high blue
@@ -20,13 +88,13 @@ def eliminateBackground(image):
 	#This is the merge of the filtered blue and  g r layers to make a display image
 	whitemax = np.array([180, 29, 255], np.uint8)
 	white_lower = np.array([0, 0, 145], np.uint8)
-	wht = cv2.inRange(HSVimage, white_lower, whitemax)
+	wht = cv2.inRange(HSVimage, white_lower, whitemax) - blue
 	#This is the isolation of the white or very white objects.
 	#Target element: Lines
 	
 	blackmax = np.array([180, 185,  185], np.uint8)
 	black_lower = np.array([0, 0, 0], np.uint8)
-	blk = cv2.inRange(HSVimage, black_lower, blackmax)
+	blk = cv2.inRange(HSVimage, black_lower, blackmax) - blue
 	#Isolation of black
 	#Target element: Background
 	
@@ -38,9 +106,10 @@ def makeOdd(x):
 	else:
 		return(x+1)
 if __name__=='__main__':
-	#image = cv2.imread('./Implementation/TwoBlueBlocks.png')
-	#input = cv2.imread('./Implementation/myalgo2101974.jpg')
-	input = cv2.imread('../Implementation/myalgo2099447.jpg')
+	#image = cv2.imread('../Implementation/TwoBlueBlocks.png')
+	#input = cv2.imread('../Implementation/myalgo2101974.jpg')
+	#input = cv2.imread('../Implementation/myalgo2099447.jpg')
+	input = cv2.imread('../Implementation/CourseMarch2-3.png')
 	image = cv2.GaussianBlur(input, (7, 7), sigmaX = 1, sigmaY = 1)
 
 	cv2.namedWindow('Frame')
@@ -48,8 +117,8 @@ if __name__=='__main__':
 	
 	cv2.createTrackbar('Th1','Frame',200,255,nothing)
 	cv2.createTrackbar('Th2','Frame',1,255,nothing)
-	cv2.createTrackbar('Th3','Frame',1,255,nothing)
-	cv2.createTrackbar('Size', 'Frame', 15, 100, nothing)
+	cv2.createTrackbar('Th3','Frame',200,255,nothing)
+	cv2.createTrackbar('Th4', 'Frame', 12, 255, nothing)
 	#gray = cv2.cvtColor(image,  cv2.COLOR_BGR2GRAY)
 	
 	HSVimage = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
@@ -61,35 +130,31 @@ if __name__=='__main__':
 		th1 = cv2.getTrackbarPos('Th1','Frame')
 		th2 = cv2.getTrackbarPos('Th2','Frame')
 		th3 = cv2.getTrackbarPos('Th3','Frame')
-		th4 = cv2.getTrackbarPos('Size','Frame')
+		th4 = cv2.getTrackbarPos('Th4','Frame')
 
+		bkelim = eliminateBackground(image)
+		blue = bkelim[:,:,0]
+		wht = bkelim[:,:,1]
+		black = bkelim[:,:,2]
+		openKernel = np.ones((10,10),np.uint8)
+		bfixed = cv2.morphologyEx(blue,cv2.MORPH_CLOSE, openKernel)
 		
-		blue_lower=np.array([100,66,147],np.uint8)
-		blue_upper=np.array([140,255,255],np.uint8)
-		blue=cv2.inRange(HSVimage,blue_lower,blue_upper)
-		#Isolation of low-high blue
-		#Target element: Firing Blocks
 		
-		#This is the merge of the filtered blue and  g r layers to make a display image
-		whitemax = np.array([180, 29, 255], np.uint8)
-		white_lower = np.array([0, 0, 145], np.uint8)
-		wht = cv2.inRange(HSVimage, white_lower, whitemax)
-		#This is the isolation of the white or very white objects.
-		#Target element: Lines
+		#Shouldn't be trying to find blue squares - just squares
 		
-		blackmax = np.array([180, 185,  185], np.uint8)
-		black_lower = np.array([0, 0, 0], np.uint8)
-		blk = cv2.inRange(HSVimage, black_lower, blackmax)
-		#Isolation of black
-		#Target element: Background
+		squares = discoverSquares(blue, th1, th2)
+		#cny = cv2.Canny(image, th3, th4, apertureSize=3)
+		#squares = discoverSquares(cny)
+		
+		
+		#cv2.imshow('original',image)
+		cv2.imshow('Fixie', squares)
+		
 		
 
-	
-		
-		cny = cv2.Canny(blue, th2, th3, apertureSize=3)
-		cv2.imshow('Canny', cny)
-		cv2.imshow('Display', blue)
-		#cv2.imshow('Color',  cv2.merge((blue,  wht,  blk)))
+		#cv2.imshow('Canny', cny)
+		cv2.imshow('Display', bfixed)
+		cv2.imshow('Color',  cv2.merge((blue,wht,black)))
 		keyPress = cv2.waitKey(1) & 0xFF
 		if (keyPress):
 			if(keyPress == ord('q')):
