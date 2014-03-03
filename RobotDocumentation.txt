@@ -1,3 +1,10 @@
+Check Off Items:
+	
+	Wheels
+		Orientation:  Subwheels on either side point towards center of robot.
+		Tightness: Make sure the wheels are adequately tightened on the shafts of the motors.
+
+
 Wheel Documentation
 	Wire Colors:
 		Black: Motor VCC

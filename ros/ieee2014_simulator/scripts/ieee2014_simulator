@@ -180,11 +180,11 @@ class Robot(object):
 
 def main():
     rospy.init_node('ieee2014_simulator')
-
-    robot = Robot((0.1, 0.1), 0.1)
-
     course_length = (97 - 3/4 * 2) * 0.0254
     course_width = (49 - 3/4 * 2) * 0.0254
+    robot = Robot((-course_length/2 + 0.1, -course_width/2 + 0.1), 0.1)
+
+
     course = [
         Line((-course_length/2, +course_width/2), (+course_length/2, +course_width/2)),
         Line((+course_length/2, +course_width/2), (+course_length/2, -course_width/2)),

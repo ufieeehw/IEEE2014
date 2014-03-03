@@ -67,7 +67,7 @@ def discoverSquares(image,canny1=64,canny2=31, discrim1 = 2.0, dicrim2 =3.0):
 					angle = angle_between(approx[j%len(approx)][0], approx[j-2][0], approx[j-1][0])
 					sumAngle += angle
 				if sumAngle > 3 or sumAngle < 4:
-					cv2.drawContours(dispimg,[approx],-1,(255,0,100))
+					#cv2.drawContours(dispimg,[approx],-1,(255,0,100))
 					finalContours.append(approx)
 					
 	return dispimg, finalContours
@@ -81,6 +81,8 @@ def eliminateBackground(image):
 	#0: Blue Blocks
 	#1: White Lines
 	#2: Black Background (Decent - Don't rely on it)
+	assert image != None, "No image passed"
+	assert image.shape[2] == 3, "Need a 3-Channel RGB"
 	
 	HSVimage = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 

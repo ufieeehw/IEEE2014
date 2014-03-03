@@ -2,6 +2,8 @@ import cv2
 import numpy as np
 import math
 import sys
+
+#GARBAGE DON'T USE
 ##TODO:
 # - Add Line Intersection Generation
 # - Add Polygon checking
@@ -14,14 +16,19 @@ import sys
 
 sys.path.append("./IEEE2014Functions/")
 try:
-	from IEEE2014Functions import jIEEE2014 as ie
+	import jIEEE2014 as ie
 except:
 	print "Jacob IEEE Library import failed"
 
 try:
-	from IEEE2014Functions import backgroundEliminator as be
+	import backgroundEliminator as be
 except:
 	print "Background Elimination Import Failed"
+	
+
+
+
+
 def nothing(x):
 	pass
 def makeOdd(x):
@@ -98,10 +105,10 @@ cv2.createTrackbar('LM', 'Frame', 1, 150, nothing)
 
 
 ##TODO rely on actual image color information to adapt~
-#img = cv2.imread('./Implementation/BlueBlockOne.jpg')
-#img = cv2.imread('./Implementation/TwoBlueBlocks.png')
-#img = cv2.imread('./Implementation/myalgo2101974.jpg')
-img = cv2.imread('./Implementation/myalgo2099447.jpg')
+#img = cv2.imread('../Implementation/BlueBlockOne.jpg')
+#img = cv2.imread('../Implementation/TwoBlueBlocks.png')
+#img = cv2.imread('../Implementation/myalgo2101974.jpg')
+img = cv2.imread('../Implementation/myalgo2099447.jpg')
 cropped = img[img.shape[0]*0.45:img.shape[0],:]
 #cleanedImage = cv2.GaussianBlur(cropped, (5,5), sigmaX = 1, sigmaY = 1)
 cleanedImage = cropped
