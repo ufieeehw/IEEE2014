@@ -113,6 +113,7 @@ class LaserScanGenerator {
 
 public:
 	boost::optional<sensor_msgs::LaserScan> msg;
+	boost::optional<sensor_msgs::LaserScan> empty;
 	sensor_msgs::LaserScan ls;
 	LaserScanGenerator() {
 	}
@@ -159,7 +160,7 @@ public:
 			msg->time_increment = (msg->scan_time) / 90.0;
 			return msg;
 		} else {
-			return boost::optional<sensor_msgs::LaserScan>(); // return "blank" optional if ours isn't ready yet
+			return empty; // return "blank" optional if ours isn't ready yet
 		}
 
 	}
