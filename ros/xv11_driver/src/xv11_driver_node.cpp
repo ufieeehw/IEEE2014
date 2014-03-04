@@ -13,11 +13,6 @@
 #include <xv11_driver/LaserMeasurements.h>
 #include <sensor_msgs/LaserScan.h>
 
-typedef struct {
-	bool valid = false;
-	sensor_msgs::LaserScan scan;
-} LaserScanWrapper_t;
-
 std::string frame_id, port_name;
 
 double to_radians(double degrees) {
@@ -174,8 +169,8 @@ public:
 int main(int argc, char **argv) {
 	ros::init(argc, argv, "xv11_driver");
 
-	ros::NodeHandle nh;
 	ros::NodeHandle priv_nh("~");
+	ros::NodeHandle nh;
 	ROS_INFO("Started xv11_driver_node");
 
 	if (priv_nh.hasParam("frame_id")) {
