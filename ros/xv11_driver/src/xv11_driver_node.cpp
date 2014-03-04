@@ -15,7 +15,7 @@
 
 std::string frame_id, port_name;
 
-double to_radians(double degrees) {
+inline double to_radians(double degrees) {
 	return degrees * (boost::math::constants::pi<double>() / 180.0);
 }
 
@@ -32,10 +32,11 @@ private:
 	boost::asio::io_service io_serv;
 	boost::asio::serial_port port;
 
-	ros::NodeHandle nh;
+	xv11_driver::LaserMeasurements msg; // move this here to avoid allocating new
 
 public:
-	XV11Driver(ros::NodeHandle& nh, std::string port_name) : nh(nh), port(io_serv, port_name) {
+	XV11Driver(std::string port_name) :
+			port(io_serv, port_name) {
 
 		boost::asio::serial_port_base::baud_rate baud(115200);
 		boost::asio::serial_port_base::character_size character_size(8);
@@ -53,14 +54,14 @@ public:
 
 	xv11_driver::LaserMeasurements read_packet(void) {
 		std::vector<char> data;
-
-		xv11_driver::LaserMeasurements msg;
+		msg.ranges = std::vector<float>(4); //preallocate sizes for speed
+		msg.intensities = std::vector<float>(4);
 
 		while (true) {
 			char byte;
 			boost::asio::read(port, boost::asio::buffer(&byte, 1));
 			data.push_back(byte);
-			if (data[0] != (char) 0xfa) {
+			if (data[0] != (char)0xfa) {
 				ROS_INFO("Threw away data buffer! Framing error? Byte was: %2x", data[0]);
 				data.clear();
 				continue;
@@ -128,15 +129,14 @@ public:
 		ls.scan_time = 0;
 		ls.range_min = 0.06;
 		ls.range_max = 5.0;
-		ls.ranges.clear();
-		ls.intensities.clear();
+		ls.ranges = std::vector<float>(360); //.clear();
+		ls.intensities = std::vector<float>(360); //.clear();
 
 		msg.reset(ls); // stick ls inside the optional
 
 	}
 
-	boost::optional<sensor_msgs::LaserScan> generate_packet(
-			xv11_driver::LaserMeasurements measurement) {
+	boost::optional<sensor_msgs::LaserScan> generate_packet(xv11_driver::LaserMeasurements measurement) {
 
 		if (measurement.packet_index == 0) {
 			init_msg();
@@ -188,11 +188,11 @@ int main(int argc, char **argv) {
 		return -1;
 	}
 
-	XV11Driver laser_object(nh, port_name);
+	XV11Driver laser_object(port_name);
 	LaserScanGenerator laser_scan_generator;
 
 	ros::Publisher lmp = nh.advertise<xv11_driver::LaserMeasurements>("laser_measurements", 1000);
-	ros::Publisher lsp = nh.advertise<sensor_msgs::LaserScan>("laser_scan",	1000);
+	ros::Publisher lsp = nh.advertise<sensor_msgs::LaserScan>("laser_scan", 1000);
 
 	xv11_driver::LaserMeasurements lmp_msg;
 	boost::optional<sensor_msgs::LaserScan> lsp_msg;
@@ -203,7 +203,6 @@ int main(int argc, char **argv) {
 		lmp.publish(lmp_msg);
 		if (lsp_msg) {
 			lsp.publish(*lsp_msg);
-
 		}
 	}
 
