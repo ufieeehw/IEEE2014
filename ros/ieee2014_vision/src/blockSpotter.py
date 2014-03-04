@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-
+import os
 try:
 	from IEEE2014Functions import backgroundEliminator as be
 except:
@@ -8,12 +8,17 @@ except:
 def nothing(x):
 	pass
 
-def spotBlocks(image):
-	
+def spotBlocks(img=None):
+	#Dear everyone:
+	#Everything is in inches because I couldn't find a metric ruler.
+	if img == None:
+		path =  os.path.dirname(os.path.abspath(__file__))
+		img = cv2.imread(path + '/Implementation/IEEEcourseMarch2-2.png')
+		cv2.imshow('image',img)
 	#Notable parameters
 	cameraHeight = 8.5 #inches
 	focal = 2.54 #in/in
-
+	
 	#Camera specs claim 5mm or 28mm
 	## ~ 0.1968 in, 1.024 in
 	##The math was done at 640x360 -- Will a higher res give better results in square discovery?
@@ -21,13 +26,15 @@ def spotBlocks(image):
 	#Discrimination factor - minimum acceptable area for the block contour
 	minimumArea = 100
 	#Discrimination by area is not reliable on the far lower bound
-	bkelim = be.eliminateBackground(cleanedImage)
+	bkelim = be.eliminateBackground(img)
 
 
 
 	blocks = np.array(bkelim[:,:,0],np.uint8)
-	contours, hierarchy = cv2.findContours(blocks,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
-	F = np.zeros_like(cleanedImage)
+	contours, hierarchy = cv2.findContours(blocks,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)	
+	if len(contours) == 0:
+		return None, None
+
 	centerofMass = [];
 	for ctr in contours:
 		M = cv2.moments(ctr)
@@ -45,8 +52,8 @@ def spotBlocks(image):
 				cx = int(M['m10']/M['m00'])
 				cy = int(M['m01']/M['m00'])
 
-				cv2.drawContours(F,[ctr], -1,  (220,150,0))
-				cv2.circle(F,(cx,cy), int(area/100), (0,0,255), thickness=-1)
+				#cv2.drawContours(F,[ctr], -1,  (220,150,0))
+				#cv2.circle(F,(cx,cy), int(area/100), (0,0,255), thickness=-1)
 				centerofMass.append((cx,cy))
 				#Need to control for 'rectangleness' - OR: remove non-course background
 
@@ -104,8 +111,13 @@ def spotBlocks(image):
 		#cv2.putText(dispimg, str(cx)+ ', ' +str(cy), (cx*4 + 10, cy*4 + 10), cv2.FONT_HERSHEY_PLAIN, 0.8, (180,20,180), thickness=1)
 		#cv2.putText(dispimg, str(imxy[0])+ ', ' +str(imxy[1]), (cx*4, cy*4), cv2.FONT_HERSHEY_PLAIN, 0.8, (0,0,255), thickness=1)
 		#cv2.putText(dispimg, str(distanceHoriz)+ ', ' +str(relativeX), (cx*4, cy*4), cv2.FONT_HERSHEY_PLAIN, 0.8, (0,0,255), thickness=1)
-		positions.append((distanceHoriz,relativeX))
+		positions.append((distanceHoriz*0.0254,relativeX*0.0254))
+		#meters
 	return positions, centerofMass
+	
+	
+	
+	
 if __name__ == '__main__':
 	cv2.namedWindow('Frame')
 	cv2.namedWindow('Display', cv2.WINDOW_NORMAL)
