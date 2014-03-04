@@ -278,8 +278,8 @@ public:
 };
 
 class MessageHandling {
-  static constexpr double const course_length = (97 - 3/4. * 2) * 0.0254;
-  static constexpr double const course_width = (49 - 3/4. * 2) * 0.0254;
+  static constexpr double course_length = (97 - 3/4. * 2) * 0.0254;
+  static constexpr double course_width = (49 - 3/4. * 2) * 0.0254;
   std::vector<std::unique_ptr<IObject> > course;
   
   ros::Subscriber odom_sub;
@@ -362,8 +362,8 @@ public:
     particles_pub = nh.advertise<geometry_msgs::PoseArray>("particles", 10);
   }
 };
-constexpr double const MessageHandling::course_length;
-constexpr double const MessageHandling::course_width;
+constexpr double MessageHandling::course_length;
+constexpr double MessageHandling::course_width;
 
 
 int main(int argc, char **argv) {
