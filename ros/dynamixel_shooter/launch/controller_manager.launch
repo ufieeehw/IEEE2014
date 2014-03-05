@@ -6,8 +6,8 @@
             namespace: dxl_manager
             serial_ports:
                 pan_tilt_port:
-                    port_name: "/dev/ttyUSB3"
-                    baud_rate: 1000000
+                    port_name: "/dev/ttyUSB0"
+                    baud_rate: 57142
                     min_motor_id: 1
                     max_motor_id: 25
                     update_rate: 20
