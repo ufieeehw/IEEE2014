@@ -1,6 +1,9 @@
 Necessary packages to install
 
-1. ros-groovy-eigen-conversions
-2. libboost-random-dev
-3. libboost-random1.48 or higher (version important: boost/random/uniform_real_distribution was added in 1.47)
-4. ros-groovy-tf
+1. ros-hydro-geometry-msgs
+2. ros-hydro-sensor-msgs
+3. ros-hydro-eigen-conversions
+4. ros-hydro-dynamixel-motor
+
+5. ros-hydro-tf ?
+
