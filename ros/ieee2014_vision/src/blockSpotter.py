@@ -16,7 +16,7 @@ def spotBlocks(img=None):
 		img = cv2.imread(path + '/Implementation/IEEEcourseMarch2-2.png')
 		cv2.imshow('image',img)
 	#Notable parameters
-	cameraHeight = 8.5 #inches
+	cameraHeight = 8.125 #inches (Gun v2)
 	focal = 2.54 #in/in
 	
 	#Camera specs claim 5mm or 28mm

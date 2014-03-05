@@ -1,16 +1,14 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(ieee2014_vision)
+project(ieee2014_target_solver)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
-  std_msgs
   rospy
-  dynamixel_msgs
+  std_msgs
   message_generation
-  
 )
 
 ## System dependencies are found with CMake's conventions
@@ -47,11 +45,11 @@ find_package(catkin REQUIRED COMPONENTS
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
-add_message_files(
- FILES
-  BlockPositions.msg
-  #Message2.msg
-)
+#add_message_files(
+#  FILES
+#  Message1.msg
+#   Message2.msg
+# )
 
 ## Generate services in the 'srv' folder
 # add_service_files(
@@ -67,12 +65,12 @@ add_message_files(
 #   Action2.action
 # )
 
-## Generate added messages and services with any dependencies listed here      
-generate_messages(
-  DEPENDENCIES
-  geometry_msgs
-  #dynamixel_msgs
-)
+## Generate added messages and services with any dependencies listed here
+#generate_messages(
+#   DEPENDENCIES
+#   geometry_msgs
+#   std_msgs
+#)
 
 ###################################
 ## catkin specific configuration ##
@@ -85,8 +83,8 @@ generate_messages(
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES ieee2014_vision
-  CATKIN_DEPENDS geometry_msgs std_msgs rospy message_runtime #dynamixel_msgs
+#  LIBRARIES ieee2014_target_solver
+  CATKIN_DEPENDS geometry_msgs rospy std_msgs message_runtime
 #  DEPENDS system_lib
 )
 
@@ -102,19 +100,19 @@ include_directories(
 )
 
 ## Declare a cpp library
-# add_library(ieee2014_vision
-#   src/${PROJECT_NAME}/ieee2014_vision.cpp
+# add_library(ieee2014_target_solver
+#   src/${PROJECT_NAME}/ieee2014_target_solver.cpp
 # )
 
 ## Declare a cpp executable
-# add_executable(ieee2014_vision_node src/ieee2014_vision_node.cpp)
+# add_executable(ieee2014_target_solver_node src/ieee2014_target_solver_node.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
-# add_dependencies(ieee2014_vision_node ieee2014_vision_generate_messages_cpp)
+# add_dependencies(ieee2014_target_solver_node ieee2014_target_solver_generate_messages_cpp)
 
 ## Specify libraries to link a library or executable target against
-# target_link_libraries(ieee2014_vision_node
+# target_link_libraries(ieee2014_target_solver_node
 #   ${catkin_LIBRARIES}
 # )
 
@@ -133,7 +131,7 @@ include_directories(
 # )
 
 ## Mark executables and/or libraries for installation
-# install(TARGETS ieee2014_vision ieee2014_vision_node
+# install(TARGETS ieee2014_target_solver ieee2014_target_solver_node
 #   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
@@ -158,7 +156,7 @@ include_directories(
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_ieee2014_vision.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_ieee2014_target_solver.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()
