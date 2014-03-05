@@ -1,0 +1,3 @@
+[submodule "ros/dynamixel_motor"]
+	path = ros/dynamixel_motor
+	url = https://github.com/arebgun/dynamixel_motor.git
