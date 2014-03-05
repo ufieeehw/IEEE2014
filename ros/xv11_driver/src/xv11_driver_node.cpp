@@ -34,6 +34,7 @@ private:
 
 	xv11_driver::LaserMeasurements msg; // move this here to avoid allocating new
 
+	std::vector<char> packet_buffer;
 public:
 	XV11Driver(std::string port_name) :
 			port(io_serv, port_name) {
@@ -50,30 +51,34 @@ public:
 		port.set_option(stop_bits);
 
 		ROS_INFO("Opened serial port: %s", port_name.c_str());
+
+		msg.ranges.reserve(4); //preallocate sizes for speed
+		msg.intensities.reserve(4);
+		packet_buffer.reserve(22);
 	}
 
 	xv11_driver::LaserMeasurements read_packet(void) {
-		std::vector<char> data;
-		msg.ranges = std::vector<float>(4); //preallocate sizes for speed
-		msg.intensities = std::vector<float>(4);
+		msg.ranges.clear();
+		msg.intensities.clear();
+		packet_buffer.clear();
 
 		while (true) {
 			char byte;
 			boost::asio::read(port, boost::asio::buffer(&byte, 1));
-			data.push_back(byte);
-			if (data[0] != (char)0xfa) {
-				ROS_INFO("Threw away data buffer! Framing error? Byte was: %2x", data[0]);
-				data.clear();
+			packet_buffer.push_back(byte);
+			if (packet_buffer[0] != (char)0xfa) {
+				ROS_INFO("Threw away data buffer! Framing error? Byte was: %2x", packet_buffer[0]);
+				packet_buffer.clear();
 				continue;
 			}
-			if (data.size() == 22) {
-				uint8_t start = data[0];
-				uint8_t index = data[1];
-				uint16_t speed = (data[3] << 8) | (data[2]);
+			if (packet_buffer.size() == 22) {
+				uint8_t start = packet_buffer[0];
+				uint8_t index = packet_buffer[1];
+				uint16_t speed = (packet_buffer[3] << 8) | (packet_buffer[2]);
 				subdata_t subdata[4];
 				for (int i = 0; i < 4; i++) {
-					subdata[i].distance = (data[4 + (4 * i) + 1] << 8) | data[4 + (4 * i) + 0];
-					subdata[i].strength = (data[4 + (4 * i) + 3] << 8) | data[4 + (4 * i) + 2];
+					subdata[i].distance = (packet_buffer[4 + (4 * i) + 1] << 8) | packet_buffer[4 + (4 * i) + 0];
+					subdata[i].strength = (packet_buffer[4 + (4 * i) + 3] << 8) | packet_buffer[4 + (4 * i) + 2];
 					subdata[i].invalid_data = ((subdata[i].distance & 0x8000) != 0);
 					subdata[i].strength_warning = ((subdata[i].distance & 0x4000) != 0);
 					subdata[i].distance &= ~(0x8000 | 0x4000);
@@ -83,7 +88,7 @@ public:
 					msg.intensities.push_back((float) (subdata[i].strength));
 				}
 
-				uint16_t checksum = (data[21] << 8) | data[20];
+				uint16_t checksum = (packet_buffer[21] << 8) | packet_buffer[20];
 
 				// if checksum is bad, go cry
 				// if program doesn't work, go cry more
@@ -117,6 +122,8 @@ public:
 	boost::optional<sensor_msgs::LaserScan> empty;
 	sensor_msgs::LaserScan ls;
 	LaserScanGenerator() {
+		ls.ranges.reserve(360);
+		ls.intensities.reserve(360);
 	}
 
 	void init_msg(void) {
@@ -129,8 +136,8 @@ public:
 		ls.scan_time = 0;
 		ls.range_min = 0.06;
 		ls.range_max = 5.0;
-		ls.ranges = std::vector<float>(360); //.clear();
-		ls.intensities = std::vector<float>(360); //.clear();
+		ls.ranges.clear();
+		ls.intensities.clear();
 
 		msg.reset(ls); // stick ls inside the optional
 
