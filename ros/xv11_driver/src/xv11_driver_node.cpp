@@ -132,6 +132,7 @@ public:
 		ls.header.stamp = ros::Time::now();
 		ls.angle_min = 0;
 		ls.angle_max = to_radians(359);
+		ls.angle_increment = to_radians(1);
 		ls.time_increment = 0;
 		ls.scan_time = 0;
 		ls.range_min = 0.06;
