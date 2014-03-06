@@ -15,6 +15,22 @@ def getNodeList():
 ##Expose a service that enables and disables targeting
 # - Should commit to a single value for position
 # - Respond to current position of servos to limit jitter
+def angle_between(v1, v2, origin):
+	
+	v1_u = unit_vector(v1-origin)
+	v2_u = unit_vector(v2-origin)
+	
+	dot = np.dot(v1_u, v2_u)
+	angle = None
+	if(dot >=0 and dot <= 1):
+		angle = np.arccos(dot)
+
+	if angle == None:
+		if (v1_u == v2_u).all():
+			return 0.0
+		else:
+			return np.pi
+	return angle
 
 class targetSolver:
 	def __init__(self):
@@ -90,12 +106,19 @@ class targetSolver:
 		tilt_msg = Float64()
 		pan_msg = Float64()
 		
-		pan_to_target = (np.pi/2.0) +  np.arccos(robotPos[1]/distance) - yaw
+		pan_to_target = np.pi - np.arccos((robotPos[0] + (self.course_length/2))/distance)
+		#pan_to_target = np.pi - np.arctan(
+		if robotPos[1] > 0:
+			#pan_to_target = np.arccos((robotPos[0] + (self.course_length/2))/distance)
+			pan_to_target = np.pi + np.arctan(robotPos[1]/(robotPos[0] + (self.course_length/2)))
+			
+			
+		
 		tilt_to_target = np.arctan((self.target_height - self.gun_height)/distance)
 		
 		if((np.abs(tilt_to_target - self.tilt_prev) > 0.1) and (np.abs(pan_to_target - self.pan_prev) > 0.1)):
 			tilt_msg.data = tilt_to_target
-			pan_msg.data = pan_to_target
+			pan_msg.data = pan_to_target - yaw
 		
 			self.pan_pub.publish(pan_msg)
 			self.tilt_pub.publish(tilt_msg)
