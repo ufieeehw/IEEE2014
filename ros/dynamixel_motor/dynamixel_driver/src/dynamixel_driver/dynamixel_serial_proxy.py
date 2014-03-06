@@ -49,8 +49,8 @@ from collections import deque
 from threading import Thread
 from collections import defaultdict
 
-import roslib
-roslib.load_manifest('dynamixel_driver')
+#import roslib
+#roslib.load_manifest('dynamixel_driver')
 
 import rospy
 import dynamixel_io
