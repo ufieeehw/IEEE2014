@@ -65,7 +65,7 @@ class blockHandler:
 		
 		#Assume tilt is zerod when using blockSpotter.
 		#figure out how to read servo status correctly
-		self.pan_sub = rospy.Subscriber('/tilt_controller/state', JointState, self.setPan)
+		self.pan_sub = rospy.Subscriber('/pan_controller/state', JointState, self.setPan)
 		
 		if(sim == 'Y'):
 			if not '/ieee2014_simulator' in getNodeList():
@@ -89,8 +89,7 @@ class blockHandler:
 		try:
 			ret, image = self.cam.read()
 		except:
-			rospy.loginfo("Image Read from camera failed")
-			return
+			rospy.loginfo("Image Read from camera failed\nUsing simulated data")
 		
 		relPositions,imxy = blockSpotter.spotBlocks(image)
 		#RelPos <-> (Forward Displacement, Lateral Displacement Left Positive)
@@ -101,6 +100,9 @@ class blockHandler:
 			return
 
 		robotPos = (data.pose.position.x,data.pose.position.y)
+		
+		
+		
 		quaternion = (
 			data.pose.orientation.x,
 			data.pose.orientation.y,
@@ -109,9 +111,10 @@ class blockHandler:
 
 		rpy = tf.transformations.euler_from_quaternion(quaternion) #Roll, Pitch, Yaw: Radians
 		yaw = rpy[2] + self.pan #CHECK: Assuming positive right for pan 
-
-
-		blockPos = np.add(robotPos,relPositions)
+		
+		cameraPos = (robotPos[0] + (self.cameraFwd*np.cos(yaw)), robotPos[1] + (self.cameraFwd*np.sin(yaw)))
+	
+		#blockPos = np.add(robotPos,relPositions)
 
 		msg = BlockPositions()
 		msg.blocks = []
@@ -119,7 +122,7 @@ class blockHandler:
 		
 		
 		for pos in relPositions:
-			absolutePos = transformCoordinates(pos, robotPos, yaw)
+			absolutePos = transformCoordinates(pos, cameraPos, yaw)
 			absPos = Pose2D()
 			absPos.x = absolutePos[0]
 			absPos.y = absolutePos[1]

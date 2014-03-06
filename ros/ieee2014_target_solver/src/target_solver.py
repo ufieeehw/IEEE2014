@@ -1,25 +1,32 @@
+#!/usr/bin/env python
 from std_msgs.msg import Float64
 from geometry_msgs.msg import Pose2D, PoseStamped
 import rospy
 import numpy as np
 import tf
 import string
+import os
 from collections import deque #This comes in handy later(
 def getNodeList():
 	nodeList = os.popen('rosnode list').read()
 	nodes = string.split(string.replace(nodeList,'\n', ' '))
 	return nodes
 
+##Expose a service that enables and disables targeting
+# - Should commit to a single value for position
+# - Respond to current position of servos to limit jitter
 
 class targetSolver:
 	def __init__(self):
 		rospy.init_node('target_solver')
 		self.course_length = (97 - 3/4 * 2) * 0.0254 #Courtesy of Lord Voight
 		self.course_width = (49 - 3/4 * 2) * 0.0254
-		self.target_pos = (-course_length/2, 0)
+		self.target_pos = (-self.course_length/2, 0)
 		self.target_height = 26.5 * 0.0254 #meters
 		
-		self.gun_height = 8.937 * 0.0254#This is the height of the center of the gun at zero
+		#self.gun_height = 8.937 * 0.0254#This is the height of the center of the gun at zero
+		self.gun_height = 5.5625 * 0.0254
+		
 		#self.height_to_gymbal = 3.25 #Gymbal to gun's firing axis
 		#self.gymbal_height = 5.6875 * 0.0254
 		#The gun height is actually a function of tilt
@@ -51,7 +58,7 @@ class targetSolver:
 			self.poseSub = rospy.Subscriber('pose', PoseStamped, self.newData)
 			
 			
-	def newData(data):
+	def newData(self,data):
 	
 		#if len(rolling_que) < 10:
 		#	rolling_que.append(data)
@@ -64,19 +71,32 @@ class targetSolver:
 			data.pose.orientation.y,
 			data.pose.orientation.z,
 			data.pose.orientation.w)
-		rpy = tf.transformation.euler_from_quaternion(quaternion)
+		rpy = tf.transformations.euler_from_quaternion(quaternion)
 		yaw = rpy[2]
-		
+
 		robotPos = (data.pose.position.x,data.pose.position.y)
-		np.subtract(co
 		distance = np.linalg.norm(np.subtract(robotPos, self.target_pos))
+		rospy.loginfo(distance)
 		
+		tilt_msg = Float64()
+		pan_msg = Float64()
 		
-		pan_to_target = np.arccos(robotPos[1]/distance) + np.pi/2 - yaw
+		pan_to_target = np.arccos(robotPos[1]/distance) - yaw
 		tilt_to_target = np.arctan((self.target_height - self.gun_height)/distance)
-		self.pan_pub(pan_to_target)
-		self.tilt_pub(tilt_to_target)
+		
+		tilt_msg.data = tilt_to_target
+		pan_msg.data = pan_to_target
+		
+		self.pan_pub.publish(pan_msg)
+		self.tilt_pub.publish(tilt_msg)
 			
-			
-			
+		rospy.sleep(0.1)
+try:
+	targeter = targetSolver()
+
+	rospy.spin()
+except rospy.ROSInterruptException:
+	rospy.loginfo('failed')
+	pass
+
 			

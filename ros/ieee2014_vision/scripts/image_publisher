@@ -1,0 +1,13 @@
+#!/usr/bin/env python
+
+import rospy
+import time
+import numpy as np
+import os, string
+import cv2
+from cv_bridge import CvBridge
+
+
+image_message = cv_to_imgmsg(cv_image,encoding="passthrough")
+#cv_image = bridge.imgmsg_to_cv(image_message, desired_encoding="passthrough")
+
