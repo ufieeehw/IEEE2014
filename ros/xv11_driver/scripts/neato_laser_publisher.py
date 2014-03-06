@@ -1,8 +1,8 @@
 #!/usr/bin/python
 from __future__ import division
 
-import roslib
-roslib.load_manifest('xv11_driver')
+#import roslib
+#roslib.load_manifest('xv11_driver')
 
 import threading
 import serial
