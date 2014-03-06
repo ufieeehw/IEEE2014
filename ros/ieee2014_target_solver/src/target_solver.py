@@ -24,6 +24,9 @@ class targetSolver:
 		self.target_pos = (-self.course_length/2, 0)
 		self.target_height = 26.5 * 0.0254 #meters
 		
+		self.pan_prev = 0
+		self.tilt_prev = 0
+		
 		#self.gun_height = 8.937 * 0.0254#This is the height of the center of the gun at zero
 		self.gun_height = 5.5625 * 0.0254
 		
@@ -48,9 +51,15 @@ class targetSolver:
 		
 		if(sim == "Y"):
 			if not '/ieee2014_simulator' in getNodeList():
+				pass
 				os.system('rosrun ieee2014_simulator ieee2014_simulator &')
-
 			rospy.loginfo("\nNOTE: Target_Solver: Using simulation pose data")
+			if not '/state_visualizer' in getNodeList():
+				pass
+				os.system('rosrun ieee2014_vision state_visualizer _sim:="Y" &')
+			rospy.loginfo("\nNOTE: Target_Solver: Using state_visualizer")	
+				
+			
 			
 			self.poseSub = rospy.Subscriber('sim_pose', PoseStamped, self.newData)
 		elif(sim =="N"):
@@ -76,19 +85,20 @@ class targetSolver:
 
 		robotPos = (data.pose.position.x,data.pose.position.y)
 		distance = np.linalg.norm(np.subtract(robotPos, self.target_pos))
-		rospy.loginfo(distance)
+		#rospy.loginfo(distance)
 		
 		tilt_msg = Float64()
 		pan_msg = Float64()
 		
-		pan_to_target = np.arccos(robotPos[1]/distance) - yaw
+		pan_to_target = (np.pi/2.0) +  np.arccos(robotPos[1]/distance) - yaw
 		tilt_to_target = np.arctan((self.target_height - self.gun_height)/distance)
 		
-		tilt_msg.data = tilt_to_target
-		pan_msg.data = pan_to_target
+		if((np.abs(tilt_to_target - self.tilt_prev) > 0.1) and (np.abs(pan_to_target - self.pan_prev) > 0.1)):
+			tilt_msg.data = tilt_to_target
+			pan_msg.data = pan_to_target
 		
-		self.pan_pub.publish(pan_msg)
-		self.tilt_pub.publish(tilt_msg)
+			self.pan_pub.publish(pan_msg)
+			self.tilt_pub.publish(tilt_msg)
 			
 		rospy.sleep(0.1)
 try:
