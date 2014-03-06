@@ -49,11 +49,12 @@ def got_pose(msg):
     #    [+.32, -.11] if time.time() % 4 < 2 else
     #    [1.03, .34])
     #desired_position = numpy.array([0, 0])
-    desired_yaw = 0
+    #desired_yaw = 0
+    
     
     position = numpy.array([msg.pose.position.x, msg.pose.position.y])
     yaw = transformations.euler_from_quaternion(xyzw_array(msg.pose.orientation))[2]
-    print position, yaw
+    #print position, yaw
     
     position_error = desired_position - position
     angle_error = angle_diff(desired_yaw, yaw)
@@ -82,6 +83,11 @@ def got_pose(msg):
             angular=Vector3(0, 0, desired_angvel),
         ),
     ))
-rospy.Subscriber('pose', PoseStamped, got_pose)
+sim = rospy.get_param('/controller/sim', "N")
+if(sim == 'Y'):
+	rospy.loginfo("\nNOTE: controller using simulation pose data")
+	rospy.Subscriber('sim_pose', PoseStamped, got_pose)
+else:
+	rospy.Subscriber('pose', PoseStamped, got_pose)
 
 rospy.spin()

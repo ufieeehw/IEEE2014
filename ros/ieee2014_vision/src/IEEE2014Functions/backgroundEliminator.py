@@ -54,7 +54,7 @@ def discoverSquares(image,canny1=64,canny2=31, discrim1 = 2.0, dicrim2 =3.0):
 		
 	contours,hierarchy = cv2.findContours(np.array(edges,np.uint8), cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
 	
-	#dispimg = np.array(np.zeros((image.shape[0],image.shape[1],3)),np.uint8)
+	dispimg = np.array(np.zeros((image.shape[0],image.shape[1],3)),np.uint8)
 	for ctr in contours:
 		arcLen = cv2.arcLength(ctr,True)
 		if arcLen > 0.1:
@@ -67,7 +67,7 @@ def discoverSquares(image,canny1=64,canny2=31, discrim1 = 2.0, dicrim2 =3.0):
 					angle = angle_between(approx[j%len(approx)][0], approx[j-2][0], approx[j-1][0])
 					sumAngle += angle
 				if sumAngle > 3 or sumAngle < 4:
-					#cv2.drawContours(dispimg,[approx],-1,(255,0,100))
+					cv2.drawContours(dispimg,[approx],-1,(255,0,100))
 					finalContours.append(approx)
 					
 	return dispimg, finalContours
@@ -76,7 +76,9 @@ def eliminateBackground(image):
 	# - Add a discriminator
 	# - Improve detection under weird lighting conditions
 	# - Improve reliability of isolation in all areas
-	
+	#th1 = cv2.getTrackbarPos('Th1','Frame')
+	#th2 = cv2.getTrackbarPos('Th2','Frame')
+	#th3 = cv2.getTrackbarPos('Th3','Frame')
 	##Channels:
 	#0: Blue Blocks
 	#1: White Lines
@@ -88,6 +90,7 @@ def eliminateBackground(image):
 
 	
 	blue_lower=np.array([100,66,109],np.uint8)
+	#blue_lower=np.array([100,th2,th3],np.uint8)
 	blue_upper=np.array([140,255,255],np.uint8)
 	blue=cv2.inRange(HSVimage,blue_lower,blue_upper)
 	#Isolation of low-high blue
@@ -120,7 +123,8 @@ if __name__=='__main__':
 	#image = cv2.imread('../Implementation/TwoBlueBlocks.png')
 	#input = cv2.imread('../Implementation/myalgo2101974.jpg')
 	#input = cv2.imread('../Implementation/myalgo2099447.jpg')
-	input = cv2.imread('../Implementation/CourseMarch2-3.png')
+	input =  cv2.imread('../Implementation/CoursePracticeMarch2.png')
+	#input = cv2.imread('../Implementation/CourseMarch2-3.png')
 	image = cv2.GaussianBlur(input, (7, 7), sigmaX = 1, sigmaY = 1)
 
 	cv2.namedWindow('Frame')
@@ -151,7 +155,7 @@ if __name__=='__main__':
 		
 		#Shouldn't be trying to find blue squares - just squares
 		
-		squares = discoverSquares(blue, th1, th2)
+		squares, ctrs = discoverSquares(blue, th1, th2)
 		#cny = cv2.Canny(image, th3, th4, apertureSize=3)
 		#squares = discoverSquares(cny)
 		
@@ -159,7 +163,7 @@ if __name__=='__main__':
 		#cv2.imshow('original',image)
 		cv2.imshow('Fixie', squares)
 		#cv2.imshow('Canny', cny)
-		cv2.imshow('Display', bfixed)
+		cv2.imshow('Display', image)
 		cv2.imshow('Color',  cv2.merge((blue,wht,black)))
 		keyPress = cv2.waitKey(1) & 0xFF
 		if (keyPress):

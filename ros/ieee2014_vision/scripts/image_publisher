@@ -7,7 +7,7 @@ import os, string
 import cv2
 from cv_bridge import CvBridge
 
-
+rospy.init_node('camera')
 image_message = cv_to_imgmsg(cv_image,encoding="passthrough")
 #cv_image = bridge.imgmsg_to_cv(image_message, desired_encoding="passthrough")
 

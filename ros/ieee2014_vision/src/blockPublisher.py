@@ -8,7 +8,7 @@ import tf
 import os
 from geometry_msgs.msg import Pose2D, PoseStamped
 from dynamixel_msgs.msg import JointState
-from blockpub.msg import BlockPositions
+from ieee2014_vision.msg import BlockPositions
 from std_msgs.msg import Float64
 
 
@@ -90,8 +90,12 @@ class blockHandler:
 			ret, image = self.cam.read()
 		except:
 			rospy.loginfo("Image Read from camera failed\nUsing simulated data")
-		
-		relPositions,imxy = blockSpotter.spotBlocks(image)
+			
+		if(ret):
+			relPositions,imxy = blockSpotter.spotBlocks(image)
+			
+		else:
+			relPositions, imxy = blockSpotter.spotBlocks()
 		#RelPos <-> (Forward Displacement, Lateral Displacement Left Positive)
 		if relPositions == None:
 
@@ -119,15 +123,18 @@ class blockHandler:
 		msg = BlockPositions()
 		msg.blocks = []
 
-		
+		#rospy.loginfo(transformCoordinates((0,0),(1,1),0))
 		
 		for pos in relPositions:
-			absolutePos = transformCoordinates(pos, cameraPos, yaw)
-			absPos = Pose2D()
-			absPos.x = absolutePos[0]
-			absPos.y = absolutePos[1]
-			absPos.theta = 0
-			msg.blocks.append(absPos)
+			#absolutePos = transformCoordinates(pos, cameraPos, yaw)
+			absolutePos = transformCoordinates(cameraPos, pos, yaw)
+			if (np.abs(absolutePos[0]) < self.course_length) and (np.abs(absolutePos[1]) < self.course_width):
+				
+				absPos = Pose2D()
+				absPos.x = absolutePos[0]
+				absPos.y = absolutePos[1]
+				absPos.theta = 0
+				msg.blocks.append(absPos)
 			
 
 		self.pub.publish(msg)

@@ -35,14 +35,14 @@ def angle_between(v1, v2, origin):
 class targetSolver:
 	def __init__(self):
 		rospy.init_node('target_solver')
-		self.course_length = (97 - 3/4 * 2) * 0.0254 #Courtesy of Lord Voight
-		self.course_width = (49 - 3/4 * 2) * 0.0254
+		self.course_length = (97 - 3/4 * 2) * 0.0254 #Courtesy of Lord Voight #X
+		self.course_width = (49 - 3/4 * 2) * 0.0254 #Y
 		self.target_pos = (-self.course_length/2, 0)
 		self.target_height = 26.5 * 0.0254 #meters
 		
 		self.pan_prev = 0
 		self.tilt_prev = 0
-		
+		self.yaw_prev = 0
 		#self.gun_height = 8.937 * 0.0254#This is the height of the center of the gun at zero
 		self.gun_height = 5.5625 * 0.0254
 		
@@ -67,11 +67,9 @@ class targetSolver:
 		
 		if(sim == "Y"):
 			if not '/ieee2014_simulator' in getNodeList():
-				pass
 				os.system('rosrun ieee2014_simulator ieee2014_simulator &')
 			rospy.loginfo("\nNOTE: Target_Solver: Using simulation pose data")
 			if not '/state_visualizer' in getNodeList():
-				pass
 				os.system('rosrun ieee2014_vision state_visualizer _sim:="Y" &')
 			rospy.loginfo("\nNOTE: Target_Solver: Using state_visualizer")	
 				
@@ -112,18 +110,30 @@ class targetSolver:
 			#pan_to_target = np.arccos((robotPos[0] + (self.course_length/2))/distance)
 			pan_to_target = np.pi + np.arctan(robotPos[1]/(robotPos[0] + (self.course_length/2)))
 			
-			
-		
 		tilt_to_target = np.arctan((self.target_height - self.gun_height)/distance)
+		rospy.loginfo((pan_to_target, tilt_to_target))
+
 		
-		if((np.abs(tilt_to_target - self.tilt_prev) > 0.1) and (np.abs(pan_to_target - self.pan_prev) > 0.1)):
+		
+		if(
+				((np.abs(tilt_to_target - self.tilt_prev) > 0.01) or (np.abs(pan_to_target - self.pan_prev) > 0.01)) or
+				(np.abs(yaw - self.yaw_prev) > 0.01)
+			):
+			
+			rospy.loginfo("Rotating")
 			tilt_msg.data = tilt_to_target
 			pan_msg.data = pan_to_target - yaw
-		
+			
 			self.pan_pub.publish(pan_msg)
 			self.tilt_pub.publish(tilt_msg)
+			self.tilt_prev = tilt_to_target
+			self.pan_prev = pan_to_target
+			self.yaw_prev = yaw
+		else:	
+			rospy.sleep(0.1)
+			#Let the robot take a break if nothing interesting is going on
+
 			
-		rospy.sleep(0.1)
 try:
 	targeter = targetSolver()
 

@@ -7,7 +7,7 @@ import math
 import numpy as np
 import os, string
 from tf import transformations
-from blockpub.msg import BlockPositions
+from ieee2014_vision.msg import BlockPositions
 from std_msgs.msg import Header, Float64
 from dynamixel_msgs.msg import JointState
 from geometry_msgs.msg import TwistStamped, PoseStamped, Pose, Point, Quaternion, PoseArray
@@ -35,7 +35,7 @@ def cvtLogical_to_Forrest((x,y)):
 def round_point((x, y)):
     return int(SCALE*x+320+.5), int(SCALE*-y+240+.5)
 def reverse_point((x, y)):
-    return (x-320)/SCALE, -(y-240)/SCALE
+    return (x-320.0)/SCALE, -(y-240.0)/SCALE
 #/Forrest
 def getNodeList():
 	nodeList = os.popen('rosnode list').read()
@@ -139,13 +139,19 @@ class Robot(object):
 		pygame.draw.circle(display, (0, 255, 0), round_point(self.position), int(SCALE*r+.5))
 		#Orientation
 		pygame.draw.line(display, (0, 0, 255), round_point(self.position), round_point(tuple(np.add(self.position, 2*r*self.forward_vector))))
+
+		#Gun Draw
+		gun_display = (100,100)
+		
+		#Real gun pitch
+		pygame.draw.line(display,(255,0,60), gun_display, (gun_display[0] + 100*math.cos(-self.tilt), gun_display[1] + 100*math.sin(-self.tilt)))
+		#Desired gun pitch
+		pygame.draw.line(display,(200,150,60), gun_display, (gun_display[0] + 75*math.cos(-self.targ_tilt), gun_display[1] + 75*math.sin(-self.targ_tilt)))
+		
+		#Desired gun yaw
+		pygame.draw.line(display,(200, 150, 60), round_point(self.position), round_point(tuple(np.add(self.position,self.goal_vec))))
 		#Gun pan
 		pygame.draw.line(display, (255,0,0), round_point(self.position), round_point(tuple(np.add(self.position, r*self.gun_pan))))
-		#Gun tilt projection
-		#pygame.draw.line(display,(180,0,60), round_point(self.position), round_point(tuple(math.cos(self.tilt)*np.add(self.position, r*self.gun_pan))))
-		
-		pygame.draw.line(display,(200, 150, 60), round_point(self.position), round_point(tuple(np.add(self.position,self.goal_vec))))
-	#/Forrest
 
 class blockHandler(object):
 	def __init__(self):
@@ -166,7 +172,7 @@ class blockHandler(object):
 			#Put text display here some day
 			return
 		for block in self.blockpositions:
-			blockrect = (round_point((block[0], block[1])), (5,5))
+			blockrect = (round_point((block[1], block[0])), (5,5))
 			pygame.draw.rect(display, (0,20,240),	blockrect, 0)
 
 def main():
@@ -195,7 +201,7 @@ def main():
 	blockobj = blockHandler()
 	display = pygame.display.set_mode((640,480))
 	clock = pygame.time.Clock()
-	while not rospy.is_shutdown():
+	def update_screen():
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT:
 				return
@@ -212,13 +218,32 @@ def main():
 							frame_id='/course',
 						),
 						pose=Pose(
-							position=Point(pos[0], pos[1], 0),
+							position=Point(pos[0], pos[1], 0.0),
 							orientation=Quaternion(*transformations.quaternion_from_euler(0,0,current_angle)),
 					  ),
 					))
+					rospy.loginfo(pos)
 				elif event.button == 2 or 3:
 					pos = reverse_point(event.pos)
-					target_angle = np.arctan((pos[1]-robot.position[1])/(pos[0]-robot.position[0]))
+					yd = pos[1]-robot.position[1]
+					xd = pos[0]-robot.position[0]
+					#target_angle = 0
+					principal_angle = np.arctan(yd/xd)
+					if yd > 0:
+						if xd > 0:
+							#target_angle = np.pi/2 + (np.pi/2 + -principal_angle)
+							target_angle = principal_angle
+						else:
+							target_angle = np.pi/2 - (-principal_angle) + np.pi/2
+						
+					elif yd < 0:
+						if xd > 0:
+							target_angle = principal_angle
+						else:
+							target_angle = -(np.pi/2 - principal_angle) - np.pi/2
+					
+										
+					
 					desired_pose_pub.publish(PoseStamped(
 						header=Header(
 							stamp=rospy.Time.now(),
@@ -229,23 +254,17 @@ def main():
 							orientation=Quaternion(*transformations.quaternion_from_euler(0,0,target_angle)),
 					  ),
 					))
-					
-					
-					
-		t = time.time()
+					rospy.loginfo((xd,yd))
+					rospy.loginfo(target_angle)
 
 		display.fill((0, 0, 0))
 		for obj in course:
 			obj.draw(display)
 
 		pygame.display.update()
+	rospy.Timer(rospy.Duration(.1), lambda te: update_screen())
+	rospy.spin()
 
-
-		clock.tick(60)
- 
-	
-	#rospy.Timer(rospy.Duration(0.1), lambda te: update_screen())
-	#rospy.spin() #
 	
 	#/Forrest
 main()
