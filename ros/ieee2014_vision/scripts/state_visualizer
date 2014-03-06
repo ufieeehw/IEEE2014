@@ -6,6 +6,7 @@ import time
 import math
 import numpy as np
 import os, string
+
 from tf import transformations
 from ieee2014_vision.msg import BlockPositions
 from std_msgs.msg import Header, Float64
@@ -200,7 +201,36 @@ def main():
 	
 	blockobj = blockHandler()
 	display = pygame.display.set_mode((640,480))
-	clock = pygame.time.Clock()
+	
+	class waypoint(object):
+		def __init__(self, start, angle=0):
+			self.position = start
+			self.angle = angle
+			
+		def set_pos(self,pos):
+			if((pos[0] < course_length/2) and (pos[0] > -course_length/2) and
+				(pos[1] < course_width/2) and (pos[1] > -course_width/2)):
+				self.position = pos
+			else:
+				pass
+				#No change!
+		def set_ang(self, ang):
+			self.angle = ang
+		
+		@property
+		def ang(self):
+			#Add constraints
+			return self.angle
+			
+		@property
+		def pos(self):
+			#Add constraints
+			return self.position
+		
+		
+	robot_waypoint = waypoint((-course_length/2 + (6*0.0254), -course_width/2 + ((5+5.25)*0.0254)), 0)
+	
+	
 	def update_screen():
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT:
@@ -208,30 +238,27 @@ def main():
 			elif event.type == pygame.MOUSEBUTTONDOWN:
 				current_position = robot.position
 				current_angle = robot.angle
-				#curQuat = transformations.quaternion_from_euler((0,0,current_angle))
 				
 				if event.button == 1:
-					pos = reverse_point(event.pos)
+					robot_waypoint.set_pos(reverse_point(event.pos))
 					desired_pose_pub.publish(PoseStamped(
 						header=Header(
 							stamp=rospy.Time.now(),
 							frame_id='/course',
 						),
 						pose=Pose(
-							position=Point(pos[0], pos[1], 0.0),
-							orientation=Quaternion(*transformations.quaternion_from_euler(0,0,current_angle)),
+							position=Point(robot_waypoint.pos[0], robot_waypoint.pos[1], 0.0),
+							orientation=Quaternion(*transformations.quaternion_from_euler(0,0,robot_waypoint.ang)),
 					  ),
 					))
-					rospy.loginfo(pos)
+
 				elif event.button == 2 or 3:
-					pos = reverse_point(event.pos)
-					yd = pos[1]-robot.position[1]
-					xd = pos[0]-robot.position[0]
-					#target_angle = 0
+					apos = reverse_point(event.pos)
+					yd = apos[1]-robot.position[1]
+					xd = apos[0]-robot.position[0]
 					principal_angle = np.arctan(yd/xd)
 					if yd > 0:
 						if xd > 0:
-							#target_angle = np.pi/2 + (np.pi/2 + -principal_angle)
 							target_angle = principal_angle
 						else:
 							target_angle = np.pi/2 - (-principal_angle) + np.pi/2
@@ -241,21 +268,17 @@ def main():
 							target_angle = principal_angle
 						else:
 							target_angle = -(np.pi/2 - principal_angle) - np.pi/2
-					
-										
-					
+					robot_waypoint.set_ang(target_angle)
 					desired_pose_pub.publish(PoseStamped(
 						header=Header(
 							stamp=rospy.Time.now(),
 							frame_id='/course',
 						),
 						pose=Pose(
-							position=Point(robot.position[0], robot.position[1], 0),
+							position=Point(robot_waypoint.pos[0],robot_waypoint.pos[1],0.0),
 							orientation=Quaternion(*transformations.quaternion_from_euler(0,0,target_angle)),
 					  ),
 					))
-					rospy.loginfo((xd,yd))
-					rospy.loginfo(target_angle)
 
 		display.fill((0, 0, 0))
 		for obj in course:
