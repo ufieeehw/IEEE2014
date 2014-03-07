@@ -4,8 +4,8 @@ import rospy
 import time
 import numpy as np
 import os, string
-import cv2
-from cv_bridge import CvBridge
+import cv2, cv
+from cv_bridge import CvBridge, CvBridgeError
 from sensor_msgs.msg import Image
 
 
@@ -14,32 +14,43 @@ class image_sender:
 
 		#cv_image = bridge.imgmsg_to_cv(image_message, desired_encoding="passthrough")
 		self.im_pub = rospy.Publisher('Camera', Image)
-		
+		self.bridge = CvBridge()	
+
+	
 	def send_message(self, cv_image):
-		image_message = cv_to_imgmsg(cv_image,encoding="passthrough")
-		im_pub.publish(image_message)
-		
+		try:
+			image_message = self.bridge.cv_to_imgmsg(cv.fromarray(cv_image),"bgr8")#,desired_encoding="passthrough")
+			self.im_pub.publish(image_message)
+		except CvBridgeError, e:
+			print e
+
+	
 def main():
 	imsend = image_sender()
 	rospy.init_node('camera')
 	
-	self.cam = cv2.VideoCapture(-1)
+	cam = cv2.VideoCapture(0)
 	
 	targetResolution = (640,360)
 	
-	self.cam.set(3,targetResolution[0]) #Width
-	self.cam.set(4,targetResolution[1]) #Height
+	cam.set(3,targetResolution[0]) #Width
+	cam.set(4,targetResolution[1]) #Height
 	
 
-	
-	try:
-		ret, frame = cam.read()
-		imsend.send_message(frame)
-		rospy.sleep(0.5)
-		rospy.spin()
-	except KeyboardInterrupt:
-		print "Shutting Down"
+	while not rospy.is_shutdown():	
+		try:
+			ret, frame = cam.read()
+			if(ret):
+				rospy.loginfo(frame.shape)
+					
+				imsend.send_message(frame)
+			else:
+
+				rospy.loginfo("FAIL Camera Read")
+			#rospy.sleep(0.5)
+			#rospy.spin()
+		except KeyboardInterrupt:
+			print "Shutting Down"
 if __name__ == '__main__':
 	main()
-
 
