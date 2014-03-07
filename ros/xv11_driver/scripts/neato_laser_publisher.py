@@ -27,6 +27,7 @@ class xv11Driver(object):
 		while True:
 			data += self._serial.read(1)
 			if data[0] != '\xfa':
+				rospy.loginfo("Threw away data buffer! Framing error? Byte was: {0:x}".format(ord(data[0])))
 				data = ''
 				continue
   			if len(data) == 22:
