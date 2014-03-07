@@ -29,10 +29,10 @@ def main():
 	imsend = image_sender()
 	rospy.init_node('camera')
 	
-	cam = cv2.VideoCapture(0)
-	
+	cam = cv2.VideoCapture(0)	
+
 	targetResolution = (640,360)
-	
+	#targetResolution = (960,720)
 	cam.set(3,targetResolution[0]) #Width
 	cam.set(4,targetResolution[1]) #Height
 	
@@ -41,7 +41,7 @@ def main():
 		try:
 			ret, frame = cam.read()
 			if(ret):
-				rospy.loginfo(frame.shape)
+				#rospy.loginfo(frame.shape)
 					
 				imsend.send_message(frame)
 			else:

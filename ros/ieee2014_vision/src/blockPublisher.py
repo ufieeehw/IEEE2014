@@ -76,7 +76,10 @@ class blockHandler:
 		
 		self.cam.set(3,targetResolution[0]) #Width
 		self.cam.set(4,targetResolution[1]) #Height
-		
+		return self
+	
+	def __exit__(self, *args):
+		self.cam.release()
 	def setPan(self,data):
 		self.pan = data.current_pos
 		
@@ -140,12 +143,10 @@ class blockHandler:
 		self.pub.publish(msg)
 		#rospy.sleep(0.2) #Is this necessary? Will it reduce stress on odroid?
 		
-	def __exit__(self, type, value, traceback):
-		self.cam.release()
 		
 if __name__=='__main__':
 	try:
-		with blockHandler as blockHandleObj:
+		with blockHandler() as blockHandleObj:
 			rospy.spin()
 	except rospy.ROSInterruptException:
 		#rospy.loginfo('failed')

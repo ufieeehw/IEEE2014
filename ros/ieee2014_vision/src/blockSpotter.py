@@ -1,9 +1,13 @@
 import cv2
 import numpy as np
 import os
+#import sys
+#import traceback
+#sys.path.insert(0,"./IEEE2014Functions")
 try:
 	from IEEE2014Functions import backgroundEliminator as be
 except:
+	#traceback.print_exc(file=sys.stdout)
 	print "Background Elimination Import Failed in blockSpotter"
 def nothing(x):
 	pass
