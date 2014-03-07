@@ -6,8 +6,40 @@ import numpy as np
 import os, string
 import cv2
 from cv_bridge import CvBridge
+from sensor_msgs.msg import Image
 
-rospy.init_node('camera')
-image_message = cv_to_imgmsg(cv_image,encoding="passthrough")
-#cv_image = bridge.imgmsg_to_cv(image_message, desired_encoding="passthrough")
+
+class image_sender:
+	def __init__(self):
+
+		#cv_image = bridge.imgmsg_to_cv(image_message, desired_encoding="passthrough")
+		self.im_pub = rospy.Publisher('Camera', Image)
+		
+	def send_message(self, cv_image):
+		image_message = cv_to_imgmsg(cv_image,encoding="passthrough")
+		im_pub.publish(image_message)
+		
+def main():
+	imsend = image_sender()
+	rospy.init_node('camera')
+	
+	self.cam = cv2.VideoCapture(-1)
+	
+	targetResolution = (640,360)
+	
+	self.cam.set(3,targetResolution[0]) #Width
+	self.cam.set(4,targetResolution[1]) #Height
+	
+
+	
+	try:
+		ret, frame = cam.read()
+		imsend.send_message(frame)
+		rospy.sleep(0.5)
+		rospy.spin()
+	except KeyboardInterrupt:
+		print "Shutting Down"
+if __name__ == '__main__':
+	main()
+
 

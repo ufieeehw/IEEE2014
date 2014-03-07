@@ -9,6 +9,7 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   rospy
   dynamixel_msgs
+  sensor_msgs
   message_generation
   
 )
@@ -71,6 +72,7 @@ add_message_files(
 generate_messages(
   DEPENDENCIES
   geometry_msgs
+  sensor_msgs
   #dynamixel_msgs
 )
 
@@ -86,7 +88,7 @@ generate_messages(
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES ieee2014_vision
-  CATKIN_DEPENDS geometry_msgs std_msgs rospy message_runtime #dynamixel_msgs
+  CATKIN_DEPENDS geometry_msgs std_msgs sensor_msgs rospy message_runtime #dynamixel_msgs
 #  DEPENDS system_lib
 )
 

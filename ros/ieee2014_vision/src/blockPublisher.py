@@ -37,13 +37,6 @@ class blockHandler:
 	def __init__(self):
 		rospy.init_node('block_publisher')
 		
-		self.cam = cv2.VideoCapture(-1)
-		
-		targetResolution = (640,360)
-		
-		self.cam.set(3,targetResolution[0]) #Width
-		self.cam.set(4,targetResolution[1]) #Height
-		
 		##Immutable parameters
 		self.course_length = (97 - 3/4 * 2) * 0.0254 #Courtesy of Lord Voight
 		self.course_width = (49 - 3/4 * 2) * 0.0254
@@ -75,7 +68,14 @@ class blockHandler:
 		elif(sim == 'N'):
 			rospy.loginfo("\nNOTE: block_publisher NOT simulating")
 			self.poseSub = rospy.Subscriber('pose', PoseStamped, self.newData)
+			
+	def __enter__(self):
+		self.cam = cv2.VideoCapture(-1)
 		
+		targetResolution = (640,360)
+		
+		self.cam.set(3,targetResolution[0]) #Width
+		self.cam.set(4,targetResolution[1]) #Height
 		
 	def setPan(self,data):
 		self.pan = data.current_pos
@@ -140,11 +140,13 @@ class blockHandler:
 		self.pub.publish(msg)
 		#rospy.sleep(0.2) #Is this necessary? Will it reduce stress on odroid?
 		
+	def __exit__(self, type, value, traceback):
+		self.cam.release()
+		
 if __name__=='__main__':
 	try:
-
-		blockHandleObj = blockHandler()
-		rospy.spin()
+		with blockHandler as blockHandleObj:
+			rospy.spin()
 	except rospy.ROSInterruptException:
 		#rospy.loginfo('failed')
 		pass
