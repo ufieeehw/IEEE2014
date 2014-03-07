@@ -7,6 +7,8 @@ import os, string
 import cv2, cv
 from cv_bridge import CvBridge, CvBridgeError
 from sensor_msgs.msg import Image
+#To use this, run it, and then on the machine you'd like to view the images do
+#rosrun image_view image_view image:=/Camera
 
 
 class image_sender:

@@ -173,7 +173,7 @@ class blockHandler(object):
 			#Put text display here some day
 			return
 		for block in self.blockpositions:
-			blockrect = (round_point((block[1], block[0])), (5,5))
+			blockrect = ( round_point( ( block[0]-(self.blockwidth/2), block[1] - (self.blockwidth/2)) ), (5,5) )
 			pygame.draw.rect(display, (0,20,240),	blockrect, 0)
 
 def main():
@@ -190,7 +190,7 @@ def main():
 		Line((-course_length/2, -course_width/2), (-course_length/2, +course_width/2)),
 		
 		Line(cvtLogical_to_Forrest((35.25*0.0254, 0)), cvtLogical_to_Forrest((35.25*0.0254, course_width)), 4),
-		Line(cvtLogical_to_Forrest((54.73*0.0254, 0)), cvtLogical_to_Forrest((54.73*0.0254, course_width)), 4),
+		Line(cvtLogical_to_Forrest((57.75*0.0254, 0)), cvtLogical_to_Forrest((57.75*0.0254, course_width)), 4),
 		Arc((-course_length/2, 0), 49*0.0245, (0,180)),
 		
 		robot,
