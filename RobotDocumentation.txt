@@ -4,6 +4,9 @@ Check Off Items:
 		Orientation:  Subwheels on either side point towards center of robot.
 		Tightness: Make sure the wheels are adequately tightened on the shafts of the motors.
 
+	Dynamixels
+		Orientation: Make sure the gun starts facing the front of the robot
+		USB2Dynamixel: Make sure the switch (on the opposite side of the RS-485/TTL connectors) is set to RS-485 for the RX-24Fs
 
 Wheel Documentation
 	Wire Colors:
