@@ -156,7 +156,7 @@ class Robot(object):
         self.sim_pose_pub.publish(PoseStamped(
             header=Header(
                 stamp=rospy.Time(self.t),
-                frame_id='/robot',
+                frame_id='/course',
             ),
             pose=Pose(
                 position=Point(self.position[0], self.position[1], 0),

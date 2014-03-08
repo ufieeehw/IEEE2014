@@ -255,7 +255,7 @@ public:
     
     geometry_msgs::PoseStamped msg;
     msg.header.stamp = t;
-    msg.header.frame_id = "/robot";
+    msg.header.frame_id = "/course";
     tf::pointEigenToMsg((Eigen::Vector3d() << position, 0).finished(), msg.pose.position);
     msg.pose.orientation = quaternion_from_yaw(angle);
     return msg;
@@ -264,7 +264,7 @@ public:
   geometry_msgs::PoseArray getParticles() const {
     geometry_msgs::PoseArray msg;
     msg.header.stamp = t;
-    msg.header.frame_id = "/robot";
+    msg.header.frame_id = "/course";
     BOOST_FOREACH(RobotParticle const &particle, particles) {
       geometry_msgs::Pose pose;
       pose.position.x = particle.getPosition()(0);
