@@ -1,7 +1,7 @@
 <!-- -*- mode: XML -*- -->
 
 <launch>
-    <node pkg="xmega_connector" type="xmega_connector.py" name="xmega_connector">
+    <node pkg="xmega_connector" type="xmega_connector_publisher.py" name="xmega_connector" respawn="true">
         <rosparam>
             port: /dev/xmega_tty
         </rosparam>
