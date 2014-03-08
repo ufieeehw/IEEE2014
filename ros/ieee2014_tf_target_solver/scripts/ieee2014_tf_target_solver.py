@@ -51,10 +51,10 @@ if __name__ == '__main__':
         goal_gun_tilt = elev
 
         if enabled is True:
-            pan_msg = Float64()
-            pan_msg.data = goal_gun_pan
             if goal_gun_pan < -(numpy.pi / 3):
                 goal_gun_pan += 2 * numpy.pi
+            pan_msg = Float64()
+            pan_msg.data = goal_gun_pan
             pan_pub.publish(pan_msg)
 
             tilt_msg = Float64()
