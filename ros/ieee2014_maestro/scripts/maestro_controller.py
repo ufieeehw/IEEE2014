@@ -13,18 +13,21 @@ class maestroController(object):
 
 	def change_clip_position(self, clip):
 		if clip.pos == 1:
-			self.servo.setTarget(0,2000)
+			self.servo.setTarget(0,3350)
 		elif clip.pos == 2:
-			self.servo.setTarget(0,4000)
+			self.servo.setTarget(0,6400)
 		elif clip.pos == 3:
-			self.servo.setTarget(0,6000)
+			self.servo.setTarget(0,10000)
+		elif clip.pos == 4:
+			self.servo.setTarget(0,1000)
 		return ClipPosResponse()	
 
 	def fire_dart(self, status):
-		if status.fire is True:
-			self.servo.setTarget(1,2000)
-			time.sleep(.1)
-			self.servo.setTarget(1,0)
+		if status.fire == True:
+			print "Fire Away!"
+			self.servo.setTarget(1,6500)
+			time.sleep(1)
+			self.servo.setTarget(1,100)
 		return FireDartResponse()
 		
 	def init_maestro_server(self):
@@ -32,7 +35,7 @@ class maestroController(object):
 		rospy.init_node('maestro_server')
 		test1 = rospy.Service('change_clip_position',ClipPos, self.change_clip_position)
 		test2 = rospy.Service('fire_dart', FireDart, self.fire_dart)
-		self.servo.setTarget(1,0)
+		self.servo.setTarget(1,100)
 		print "Ready to go, sir!"
 		rospy.spin()
 
