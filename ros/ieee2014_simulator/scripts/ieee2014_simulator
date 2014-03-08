@@ -9,8 +9,9 @@ import pygame
 
 import rospy
 from xv11_driver.msg import LaserMeasurements
-from std_msgs.msg import Header
+from std_msgs.msg import Header, Float64
 from geometry_msgs.msg import TwistStamped, PoseStamped, Pose, Point, Quaternion
+from dynamixel_msgs.msg import JointState
 from tf import transformations
 
 from ieee2014_simulator.vector import v, V
@@ -176,7 +177,42 @@ class Robot(object):
     def intersect_with_ray(self, start, direction):
         return inf
 
+class Dynamixel(object):
+    def __init__(self):
+        self.pan_angle = 0.0
+        self.tilt_angle = 0.0
+        self.pan_pub = rospy.Publisher('/sim_pan_controller/state', JointState)
+        self.tilt_pub = rospy.Publisher('/sim_tilt_controller/state', JointState)
+        rospy.Subscriber('/sim_pan_controller/command', Float64, self.set_pan_angle)
+        rospy.Subscriber('/sim_tilt_controller/command', Float64, self.set_tilt_angle)
 
+        # pan_msg = JointState()
+        # pan_msg.current_pos = self.pan_angle
+        # self.pan_pub.publish(pan_msg)
+        # tilt_msg = JointState()
+        # tilt_msg.current_pos = self.tilt_angle
+        # self.tilt_pub.publish(tilt_msg)
+
+    def set_pan_angle(self, msg):
+        self.pan_angle = msg.data
+
+
+    def set_tilt_angle(self, msg):
+        self.tilt_angle = msg.data
+
+
+    def publish_servo_positions(self):
+        pan_msg = JointState()
+        pan_msg.header.stamp = rospy.Time.now()
+        pan_msg.current_pos = self.pan_angle
+        pan_msg.goal_pos = self.pan_angle
+        self.pan_pub.publish(pan_msg)
+
+        tilt_msg = JointState()
+        tilt_msg.header.stamp = rospy.Time.now()
+        tilt_msg.current_pos = self.tilt_angle
+        tilt_msg.goal_pos = self.tilt_angle
+        self.tilt_pub.publish(tilt_msg)
 
 def main():
     rospy.init_node('ieee2014_simulator')
@@ -185,6 +221,7 @@ def main():
     robot = Robot((0.1, 0.3), 0.2)
     #robot = Robot((-course_length/2 + (6*0.0254), -course_width/2 + ((5+5.25)*0.0254)), 0.0)
 
+    dynamixels = Dynamixel()
     course = [
         Line((-course_length/2, +course_width/2), (+course_length/2, +course_width/2)),
         Line((+course_length/2, +course_width/2), (+course_length/2, -course_width/2)),
@@ -197,6 +234,7 @@ def main():
     
     clock = pygame.time.Clock()
     while not rospy.is_shutdown():
+        dynamixels.publish_servo_positions()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 return

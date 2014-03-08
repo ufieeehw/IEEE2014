@@ -18,15 +18,15 @@ def process_joy_data_callback(data):
 	global pan_angle
 
 	tilt_axis = data.axes[5]
-	if tilt_axis == 1.0:
+	if tilt_axis == -1.0:
 		tilt_angle -= one_degree #pushing up on the d-pad gives a +1.0
-	elif tilt_axis == -1.0:
+	elif tilt_axis == 1.0:
 		tilt_angle += one_degree #and down gives -1.0
 
-	if tilt_angle > lowest_tilt_angle:
+	if tilt_angle < lowest_tilt_angle:
 		tilt_angle = lowest_tilt_angle
 
-	if tilt_angle < highest_tilt_angle:
+	if tilt_angle > highest_tilt_angle:
 		tilt_angle = highest_tilt_angle
 
 	pan_axis = data.axes[4]
@@ -57,19 +57,25 @@ def process_joy_data_callback(data):
 
 
 #These values are hardcoded for now.
-lowest_tilt_angle = 0.255
-highest_tilt_angle = -0.560
+lowest_tilt_angle = -0.255
+highest_tilt_angle = 0.560
 
-max_left_pan_angle = 3.088
-max_right_pan_angle = -3.19
+max_left_pan_angle = 4.18879
+max_right_pan_angle = -1.0472
 
 tilt_angle = 0
 pan_angle = 0 #by default, we'll be centered
 
 one_degree = 0.0174533 # 1 degree in radians
 
-tilt_pub = rospy.Publisher('/tilt_controller/command', Float64)
-pan_pub = rospy.Publisher('/pan_controller/command', Float64)
+sim = rospy.get_param('~sim', "N")
+if(sim == 'Y'):
+   prefix = 'sim_'
+else:
+   prefix = ''
+
+tilt_pub = rospy.Publisher('/{0}tilt_controller/command'.format(prefix), Float64)
+pan_pub = rospy.Publisher('/{0}pan_controller/command'.format(prefix), Float64)
 rospy.Subscriber('/joy', Joy, process_joy_data_callback)
 
 rospy.spin()	
