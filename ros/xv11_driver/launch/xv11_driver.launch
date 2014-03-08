@@ -1,0 +1,11 @@
+<!-- -*- mode: XML -*- -->
+
+<launch>
+    <node pkg="xv11_driver" type="xv11_driver_node" name="xv11_driver_node">
+        <rosparam>
+            port: /dev/lidar_tty
+            frame_id: /lidar
+        </rosparam>
+    </node>
+</launch>
+

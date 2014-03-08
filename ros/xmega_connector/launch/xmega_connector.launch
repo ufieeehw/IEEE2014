@@ -1,0 +1,10 @@
+<!-- -*- mode: XML -*- -->
+
+<launch>
+    <node pkg="xmega_connector" type="xmega_connector.py" name="xmega_connector">
+        <rosparam>
+            port: /dev/xmega_tty
+        </rosparam>
+    </node>
+</launch>
+
