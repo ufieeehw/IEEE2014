@@ -60,4 +60,4 @@ if __name__ == '__main__':
             tilt_msg = Float64()
             tilt_msg.data = goal_gun_tilt
             tilt_pub.publish(tilt_msg)
-        rospy.sleep(dt)
+        rate.sleep()
