@@ -6,11 +6,17 @@ import rospy
 import cv2
 import tf
 import os
+import sys
+import traceback
 from geometry_msgs.msg import Pose2D, PoseStamped
 from dynamixel_msgs.msg import JointState
 from ieee2014_vision.msg import BlockPositions
 from std_msgs.msg import Float64
-
+try:
+	from IEEE2014Functions import image_publisher as impub
+except:
+	traceback.print_exc(file=sys.stdout)
+	print "Image Publisher Import Failed"
 
 ## Sub :: sim_pose | pose ; camera pan/tilt ;
 ## Pub :: blockPositions ;
@@ -33,6 +39,7 @@ def transformCoordinates(pt, offset, angle):
 	x = (pt[0]*np.cos(angle)) - (pt[1]*np.sin(angle)) + offset[0]
 	y = (pt[0]*np.sin(angle)) - (pt[1]*np.cos(angle)) + offset[1]
 	return(x,y)
+
 class blockHandler:
 	def __init__(self):
 		rospy.init_node('block_publisher')
@@ -54,6 +61,7 @@ class blockHandler:
 		
 		##Begin publisher and subscribers
 		sim = rospy.get_param('/block_publisher/sim', "N")
+		self.publish_images = rospy.get_param('/block_publisher/debug', "N")
 		self.pub = rospy.Publisher('block_positions', BlockPositions)
 		
 		#Assume tilt is zerod when using blockSpotter.
@@ -65,9 +73,12 @@ class blockHandler:
 				os.system('rosrun ieee2014_simulator ieee2014_simulator &')
 			rospy.loginfo("\nNOTE: block_publisher Using simulation pose data")
 			self.poseSub = rospy.Subscriber('sim_pose', PoseStamped, self.newData)
+		
 		elif(sim == 'N'):
 			rospy.loginfo("\nNOTE: block_publisher NOT simulating")
 			self.poseSub = rospy.Subscriber('pose', PoseStamped, self.newData)
+		if(self.publish_images == 'Y'):
+			self.image_pub = impub.image_sender()
 			
 	def __enter__(self):
 		self.cam = cv2.VideoCapture(-1)
@@ -96,7 +107,10 @@ class blockHandler:
 			
 		if(ret):
 			relPositions,imxy = blockSpotter.spotBlocks(image)
-			
+			if self.publish_images == 'Y':
+				for xy in imxy:
+					cv2.circle(image, xy,5,(200,100,50),thickness=-1)
+				self.image_pub.send_message(image)
 		else:
 			relPositions, imxy = blockSpotter.spotBlocks()
 		#RelPos <-> (Forward Displacement, Lateral Displacement Left Positive)
@@ -106,9 +120,9 @@ class blockHandler:
 			rospy.sleep(0.1) #-dbg
 			return
 
+
+
 		robotPos = (data.pose.position.x,data.pose.position.y)
-		
-		
 		
 		quaternion = (
 			data.pose.orientation.x,

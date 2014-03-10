@@ -45,7 +45,6 @@ def spotBlocks(img=None, debug=False):
 	
 	squares = np.array(np.zeros((img.shape[0],img.shape[1])),np.uint8)
 	cv2.drawContours(squares,outContours, -1, (255),thickness=-1)
-	cv2.imshow("Hello",dispimg)
 	contours, hierarchy = cv2.findContours(squares,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)	
 	if len(contours) == 0:
 		return None, None
