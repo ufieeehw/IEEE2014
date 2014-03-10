@@ -53,7 +53,7 @@ class targetSolver:
 		#self.tilt_servo_offset = 0 #meters
 		#self.gun_length = 0.08 #meters
 		
-		sim = rospy.get_param('/target_solver/sim', "N")
+		sim = rospy.get_param('~/target_solver/sim', "N")
 		
 		#CHECK: Doesn't look like there is a control subscriber in place yet
 		

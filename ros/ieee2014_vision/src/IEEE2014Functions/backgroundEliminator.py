@@ -67,10 +67,13 @@ def discoverSquares(image,canny1=64,canny2=31, discrim1 = 2.0, dicrim2 =3.0):
 					angle = angle_between(approx[j%len(approx)][0], approx[j-2][0], approx[j-1][0])
 					sumAngle += angle
 				if sumAngle > 3 or sumAngle < 4:
-					cv2.drawContours(dispimg,[approx],-1,(255,0,100))
+					#cv2.drawContours(dispimg,[approx],-1,(255,0,100))
 					finalContours.append(approx)
-					
+							
+	
+	cv2.drawContours(dispimg,finalContours, -1, (255,0,100),thickness=-1)
 	return dispimg, finalContours
+
 def eliminateBackground(image):
 	##TODO: 
 	# - Add a discriminator
@@ -120,12 +123,23 @@ def makeOdd(x):
 		
 		
 if __name__=='__main__':
+	import sys, os
 	#image = cv2.imread('../Implementation/TwoBlueBlocks.png')
 	#input = cv2.imread('../Implementation/myalgo2101974.jpg')
 	#input = cv2.imread('../Implementation/myalgo2099447.jpg')
-	input =  cv2.imread('../Implementation/CoursePracticeMarch2.png')
+	
+	path = os.path.dirname(os.path.abspath(__file__))
+        path = os.path.abspath(os.path.join(path,".."))
+	#img = cv2.imread(path + '/Debug/IEEEcourseMarch2-2.png')
+        if len(sys.argv) > 1:
+                pos = sys.argv[1]
+        else:
+                pos = 'frame0000'
+	
+        input= cv2.imread(path + '/Debug/' + pos + '.jpg')
+	#input =  cv2.imread('../Implementation/CoursePracticeMarch2.png')
 	#input = cv2.imread('../Implementation/CourseMarch2-3.png')
-	image = cv2.GaussianBlur(input, (7, 7), sigmaX = 1, sigmaY = 1)
+	image = cv2.GaussianBlur(input, (3, 3), sigmaX = 1, sigmaY = 1)
 
 	cv2.namedWindow('Frame')
 	
@@ -165,7 +179,7 @@ if __name__=='__main__':
 		#cv2.imshow('Canny', cny)
 		cv2.imshow('Display', image)
 		cv2.imshow('Color',  cv2.merge((blue,wht,black)))
-		keyPress = cv2.waitKey(1) & 0xFF
+		keyPress = cv2.waitKey(30) & 0xFF
 		if (keyPress):
 			if(keyPress == ord('q')):
 

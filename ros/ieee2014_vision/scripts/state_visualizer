@@ -77,7 +77,7 @@ class Robot(object):
 		self.targ_tilt = 0.0
 		self.targ_pan = 0.0
 		
-		sim = rospy.get_param('/state_visualizer/sim', "N")
+		sim = rospy.get_param('~/state_visualizer/sim', "N")
 		if(sim == 'Y'):
 			rospy.loginfo("\nNOTE: state_visualizer Using simulation pose data")
 			self.poseSub = rospy.Subscriber('sim_pose', PoseStamped, self.set_pose)
@@ -235,7 +235,9 @@ def main():
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT:
 				return
+
 			elif event.type == pygame.MOUSEBUTTONDOWN:
+				#rospy.loginfo("HELLO")
 				current_position = robot.position
 				current_angle = robot.angle
 				
@@ -251,7 +253,7 @@ def main():
 							orientation=Quaternion(*transformations.quaternion_from_euler(0,0,robot_waypoint.ang)),
 					  ),
 					))
-
+					rospy.loginfo(robot_waypoint.pos)
 				elif event.button == 2 or 3:
 					apos = reverse_point(event.pos)
 					yd = apos[1]-robot.position[1]

@@ -1,0 +1,8 @@
+<launch>
+		<node name="Block_Publisher" pkg="ieee2014_vision" type="blockPublisher.py" clear_params="true"/>
+		<node name="Simulator" pkg="ieee2014_simulator" type="ieee2014_simulator" clear_param="true"/>
+		<node name="State_Visualizer" pkg="ieee2014_vision type="state_visualizer" clear_param="true"/>
+
+		<param name="state_visualizer/sim" value="Y"/>
+		<param name="block_publisher/sim" value="Y"/>
+</launch>

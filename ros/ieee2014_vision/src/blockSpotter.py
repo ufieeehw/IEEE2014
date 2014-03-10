@@ -12,13 +12,17 @@ except:
 def nothing(x):
 	pass
 
-def spotBlocks(img=None):
+def spotBlocks(img=None, debug=False):
 	#Dear everyone:
 	#Everything is in inches because I couldn't find a metric ruler.
 	if img == None:
 		path =  os.path.dirname(os.path.abspath(__file__))
-		img = cv2.imread(path + '/Implementation/IEEEcourseMarch2-2.png')
-		cv2.imshow('image',img)
+		#img = cv2.imread(path + '/Debug/IEEEcourseMarch2-2.png')
+		img = cv2.imread(path + '/Debug/frame0000.jpg')
+		assert img != None, "Image read failed"
+			
+		
+		#cv2.imshow('image',img)
 	#Notable parameters
 	cameraHeight = 8.125 #inches (Gun v2)
 	focal = 2.54 #in/in
@@ -44,7 +48,6 @@ def spotBlocks(img=None):
 		M = cv2.moments(ctr)
 		cx = 0
 		cy = 0
-		#This is the poor man's way of saying "If m00!=0:"
 
 		#print area
 		if M['m00']!= 0:
@@ -123,6 +126,7 @@ def spotBlocks(img=None):
 	
 	
 if __name__ == '__main__':
+	import sys
 	cv2.namedWindow('Frame')
 	cv2.namedWindow('Display', cv2.WINDOW_NORMAL)
 	cv2.createTrackbar('Th1','Frame',25,50,nothing)
@@ -138,13 +142,22 @@ if __name__ == '__main__':
 	##Test images
 	#img = cv2.imread('./Implementation/myalgo2099447.jpg')
 	#img = cv2.imread('./Implementation/CoursePracticeMarch2.png')
-	img = cv2.imread('./Implementation/IEEEcourseMarch2-2.png')
+	#img = cv2.imread('./Implementation/IEEEcourseMarch2-2.png')
 	#img = cv2.imread('./Implementation/CourseMarch2-3.png')
 
+	
+	path =  os.path.dirname(os.path.abspath(__file__))
+	#img = cv2.imread(path + '/Debug/IEEEcourseMarch2-2.png')
+	if len(sys.argv) > 1:
+		pos = sys.argv[1]
+	else:
+		pos = 'frame0000'
+
+	img= cv2.imread(path + '/Debug/' + pos + '.jpg')
 	#cropped = img[img.shape[0]*0.45:img.shape[0],:]
 	cropped = img
 	cleanedImage = cv2.GaussianBlur(cropped, (3,3), sigmaX = 1, sigmaY = 1)
-
+	
 	while(True):
 		th1 = cv2.getTrackbarPos('Th1','Frame')
 		th2 = cv2.getTrackbarPos('Th2','Frame')
@@ -152,7 +165,7 @@ if __name__ == '__main__':
 
 		
 		positions,com = spotBlocks(cleanedImage)
-		print positions
+		#print positions
 		for k in range(len(positions)):
 			cm = com[k]
 			pos = positions[k]

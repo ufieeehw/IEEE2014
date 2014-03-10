@@ -117,7 +117,7 @@ class blockHandler:
 			data.pose.orientation.w)
 
 		rpy = tf.transformations.euler_from_quaternion(quaternion) #Roll, Pitch, Yaw: Radians
-		yaw = rpy[2] + self.pan #CHECK: Assuming positive right for pan 
+		yaw = rpy[2] + self.pan #CHECK: Assuming positive left for camera PAN
 		
 		cameraPos = (robotPos[0] + (self.cameraFwd*np.cos(yaw)), robotPos[1] + (self.cameraFwd*np.sin(yaw)))
 	
@@ -127,10 +127,25 @@ class blockHandler:
 		msg.blocks = []
 
 		#rospy.loginfo(transformCoordinates((0,0),(1,1),0))
-		
+
+
 		for pos in relPositions:
-			#absolutePos = transformCoordinates(pos, cameraPos, yaw)
-			absolutePos = transformCoordinates(cameraPos, pos, yaw)
+			if pos[1] < 0:
+				continue
+			phi = np.arctan(pos[1]/pos[0])
+			L = np.linalg.norm((pos[0],pos[1]))
+			#assert L == np.sqrt(np.square(pos[0]) + np.square(pos[1])), "Jacob, you was wrong about norms"
+			
+			xOffset = L*np.cos(phi + yaw)
+			yOffset = L*np.sin(phi + yaw)
+
+			absolutePos = (cameraPos[0] + xOffset, -(cameraPos[1] + yOffset))
+			#absolutePos = (cameraPos[0] + pos[0], cameraPos[1] + pos[1])
+			
+			
+			
+			#absolutePos = transformCoordinates(pos, cameraPos, yaw + self.pan)
+			#absolutePos = transformCoordinates(cameraPos, pos, yaw + self.pan)
 			if (np.abs(absolutePos[0]) < self.course_length) and (np.abs(absolutePos[1]) < self.course_width):
 				
 				absPos = Pose2D()
