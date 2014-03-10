@@ -32,14 +32,21 @@ def spotBlocks(img=None, debug=False):
 	##The math was done at 640x360 -- Will a higher res give better results in square discovery?
 
 	#Discrimination factor - minimum acceptable area for the block contour
-	minimumArea = 100
+	minimumArea = 20
 	#Discrimination by area is not reliable on the far lower bound
+
+	img = cv2.GaussianBlur(img, (3, 3), sigmaX = 1, sigmaY = 1)
 	bkelim = be.eliminateBackground(img)
 
 
-
-	blocks = np.array(bkelim[:,:,0],np.uint8)
-	contours, hierarchy = cv2.findContours(blocks,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)	
+	blue = np.array(bkelim[:,:,0],np.uint8)
+	#dbg
+	dispimg, outContours = be.discoverSquares(blue,200,1)
+	
+	squares = np.array(np.zeros((img.shape[0],img.shape[1])),np.uint8)
+	cv2.drawContours(squares,outContours, -1, (255),thickness=-1)
+	cv2.imshow("Hello",dispimg)
+	contours, hierarchy = cv2.findContours(squares,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)	
 	if len(contours) == 0:
 		return None, None
 
@@ -106,21 +113,27 @@ def spotBlocks(img=None, debug=False):
 	#dispcenter = (cleanedImage.shape[1]/2, cleanedImage.shape[0]/2)
 	
 	positions = []
+	goodComs = []
 	for com in centerofMass:
 		cxy = np.array([com[0],com[1]],np.float32)
 		imxy = (center - cxy)/center
 		xim = imxy[0]
 		yim = imxy[1]
-		
-		#The numbers are correction factors because my focal length is off in x and y
-		distanceHoriz = -cameraHeight*(focal/yim)/1.13 #Forward +, NO REAR LOL ITS A CAMERA
-		relativeX = ((distanceHoriz*xim)/focal)*1.7 #Left +; Right -
-		#cv2.putText(dispimg, str(cx)+ ', ' +str(cy), (cx*4 + 10, cy*4 + 10), cv2.FONT_HERSHEY_PLAIN, 0.8, (180,20,180), thickness=1)
-		#cv2.putText(dispimg, str(imxy[0])+ ', ' +str(imxy[1]), (cx*4, cy*4), cv2.FONT_HERSHEY_PLAIN, 0.8, (0,0,255), thickness=1)
-		#cv2.putText(dispimg, str(distanceHoriz)+ ', ' +str(relativeX), (cx*4, cy*4), cv2.FONT_HERSHEY_PLAIN, 0.8, (0,0,255), thickness=1)
-		positions.append((distanceHoriz*0.0254,relativeX*0.0254))
-		#meters
-	return positions, centerofMass
+	
+		if cxy[1] > img.shape[0]/2.0:
+			#The numbers are correction factors because my focal length is off in x and y
+			distanceHoriz = -cameraHeight*(focal/yim)/1.13 #Forward +, NO REAR LOL ITS A CAMERA
+			relativeX = ((distanceHoriz*xim)/focal)*1.7 #Left +; Right -
+			#cv2.putText(dispimg, str(cx)+ ', ' +str(cy), (cx*4 + 10, cy*4 + 10), cv2.FONT_HERSHEY_PLAIN, 0.8, (180,20,180), thickness=1)
+			#cv2.putText(dispimg, str(imxy[0])+ ', ' +str(imxy[1]), (cx*4, cy*4), cv2.FONT_HERSHEY_PLAIN, 0.8, (0,0,255), thickness=1)
+			#cv2.putText(dispimg, str(distanceHoriz)+ ', ' +str(relativeX), (cx*4, cy*4), cv2.FONT_HERSHEY_PLAIN, 0.8, (0,0,255), thickness=1)
+			positions.append((distanceHoriz*0.0254,relativeX*0.0254))
+			
+			goodComs.append(com)
+
+
+			#meters
+	return positions, goodComs
 	
 	
 	
@@ -156,14 +169,14 @@ if __name__ == '__main__':
 	img= cv2.imread(path + '/Debug/' + pos + '.jpg')
 	#cropped = img[img.shape[0]*0.45:img.shape[0],:]
 	cropped = img
-	cleanedImage = cv2.GaussianBlur(cropped, (3,3), sigmaX = 1, sigmaY = 1)
 	
 	while(True):
 		th1 = cv2.getTrackbarPos('Th1','Frame')
 		th2 = cv2.getTrackbarPos('Th2','Frame')
 		th3 = cv2.getTrackbarPos('Th3','Frame')
 
-		
+				
+		cleanedImage = cv2.GaussianBlur(cropped, (3,3), sigmaX = 1, sigmaY = 1)
 		positions,com = spotBlocks(cleanedImage)
 		#print positions
 		for k in range(len(positions)):

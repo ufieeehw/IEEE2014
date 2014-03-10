@@ -139,7 +139,7 @@ class blockHandler:
 			xOffset = L*np.cos(phi + yaw)
 			yOffset = L*np.sin(phi + yaw)
 
-			absolutePos = (cameraPos[0] + xOffset, -(cameraPos[1] + yOffset))
+			absolutePos = (cameraPos[0] + xOffset, cameraPos[1] + yOffset)
 			#absolutePos = (cameraPos[0] + pos[0], cameraPos[1] + pos[1])
 			
 			

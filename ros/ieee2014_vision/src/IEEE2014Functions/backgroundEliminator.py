@@ -58,7 +58,7 @@ def discoverSquares(image,canny1=64,canny2=31, discrim1 = 2.0, dicrim2 =3.0):
 	for ctr in contours:
 		arcLen = cv2.arcLength(ctr,True)
 		if arcLen > 0.1:
-			approx = cv2.approxPolyDP(ctr,arcLen*(th4/500.0), True)	
+			approx = cv2.approxPolyDP(ctr,arcLen*(12/500.0), True)	
 	
 			if len(approx)>=4:# and cv2.isContourConvex(approx): #&&np.fabs(cv2.contourArea(approx)) > 1000
 				sumAngle = 0
@@ -164,7 +164,7 @@ if __name__=='__main__':
 		wht = bkelim[:,:,1]
 		black = bkelim[:,:,2]
 		openKernel = np.ones((10,10),np.uint8)
-		bfixed = cv2.morphologyEx(blue,cv2.MORPH_CLOSE, openKernel)
+		#fixed = cv2.morphologyEx(blue,cv2.MORPH_CLOSE, openKernel)
 		
 		
 		#Shouldn't be trying to find blue squares - just squares
