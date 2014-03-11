@@ -1,0 +1,100 @@
+#!/usr/bin/python
+
+import math
+
+from twisted.internet import reactor, defer
+
+import rospy
+from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
+from std_msgs.msg import Header
+
+from ieee2014_controller.srv import SetEnabled
+
+rospy.init_node('ieee2014_mission_runner')
+
+class TopicReader(object):
+    def __init__(self, topic_name, topic_type):
+        self._sub = rospy.Subscriber(topic_name, topic_type, lambda msg: reactor.callFromThread(self._cb, msg))
+        self._dfs = []
+    
+    def _cb(self, msg):
+        for df in self._dfs:
+            reactor.callLater(0, df.callback, msg)
+        self._dfs = []
+    
+    def get_next_message(self):
+        df = defer.Deferred()
+        self._dfs.append(df)
+        return df
+
+controller_pub = rospy.Publisher('desired_pose', PoseStamped, queue_size=10)
+controller_set_enabled = rospy.ServiceProxy(
+    'controller/set_enabled', SetEnabled)
+
+pose_topic = TopicReader('pose', PoseStamped)
+
+@defer.inlineCallbacks
+def go_to_point(point):
+    # sent point to controller
+    controller_pub.publish(PoseStamped(
+        header=Header(
+            frame_id='/course',
+        ),
+        pose=Pose(
+            position=Point(point[0], point[1], 0),
+            orientation=Quaternion(0, 0, 0, 1),
+        ),
+    ))
+    
+    # enable controller
+    yield reactor.callInThread(controller_set_enabled, True)
+    
+    # wait until near point
+    while True:
+        controller_pub.publish(PoseStamped(
+            header=Header(
+                frame_id='/course',
+            ),
+            pose=Pose(
+                position=Point(point[0], point[1], 0),
+                orientation=Quaternion(0, 0, 0, 1),
+            ),
+        ))
+        msg = yield pose_topic.get_next_message()
+        distance = math.hypot(
+            msg.pose.position.x - point[0],
+            msg.pose.position.y - point[1])
+        print distance
+        if distance < 0.05:
+            break
+    
+    # disable controller (stops wheels)
+    yield reactor.callInThread(controller_set_enabled, False)
+
+def sleep(t):
+    d = defer.Deferred(canceller=lambda d_: dc.cancel())
+    dc = reactor.callLater(t, d.callback, None)
+    return d
+
+@defer.inlineCallbacks
+def main():
+    while True:
+        print 'a'
+        yield go_to_point((0.5, 0))
+        print 'b'
+        yield sleep(3)
+        print 'c'
+        yield go_to_point((-0.5, 0))
+        print 'd'
+        yield sleep(3)
+        print 'e'
+
+def run():
+    def stopper(x):
+        reactor.stop()
+        return x
+    return main().addBoth(stopper)
+reactor.callWhenRunning(run)
+
+reactor.callWhenRunning(lambda: rospy.core.add_client_shutdown_hook(lambda reason=None: reactor.callFromThread(reactor.stop)))
+reactor.run()
