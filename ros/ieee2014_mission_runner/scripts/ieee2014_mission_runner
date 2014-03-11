@@ -9,6 +9,7 @@ from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
 from std_msgs.msg import Header
 
 from ieee2014_controller.srv import SetEnabled
+from ieee2014_maestro.srv import ClipPos, FireDart
 
 rospy.init_node('ieee2014_mission_runner')
 
@@ -30,6 +31,10 @@ class TopicReader(object):
 controller_pub = rospy.Publisher('desired_pose', PoseStamped, queue_size=10)
 controller_set_enabled = rospy.ServiceProxy(
     'controller/set_enabled', SetEnabled)
+change_clip_position = rospy.ServiceProxy(
+    'change_clip_position', ClipPos)
+fire_dart = rospy.ServiceProxy(
+    'fire_dart', FireDart)
 
 pose_topic = TopicReader('pose', PoseStamped)
 
@@ -65,7 +70,7 @@ def go_to_point(point):
             msg.pose.position.x - point[0],
             msg.pose.position.y - point[1])
         print distance
-        if distance < 0.05:
+        if distance < 0.03:
             break
     
     # disable controller (stops wheels)
@@ -78,16 +83,22 @@ def sleep(t):
 
 @defer.inlineCallbacks
 def main():
-    while True:
-        print 'a'
-        yield go_to_point((0.5, 0))
-        print 'b'
+    start_pos = (-1.09, -0.34)
+    block_positions = [
+        (-0.30, -0.11),
+        (-0.10,  0.33),
+        (+0.29, -0.18),
+    ]
+    end_pos = (1.03, -0.40)
+    
+    for i, block_position in enumerate(block_positions):
+        yield go_to_point(block_position)
+        yield change_clip_position(i+1)
         yield sleep(3)
-        print 'c'
-        yield go_to_point((-0.5, 0))
-        print 'd'
-        yield sleep(3)
-        print 'e'
+        yield fire_dart(True)
+        yield sleep(1)
+    yield go_to_point(end_pos)
+    yield change_clip_position(4)
 
 def run():
     def stopper(x):
