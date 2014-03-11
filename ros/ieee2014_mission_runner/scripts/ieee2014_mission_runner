@@ -28,13 +28,18 @@ class TopicReader(object):
         self._dfs.append(df)
         return df
 
+def wrap_blocking_func(f):
+    def _(*args, **kwargs):
+        return reactor.callInThread(f, *args, **kwargs)
+    return _
+
 controller_pub = rospy.Publisher('desired_pose', PoseStamped, queue_size=10)
-controller_set_enabled = rospy.ServiceProxy(
-    'controller/set_enabled', SetEnabled)
-change_clip_position = rospy.ServiceProxy(
-    'change_clip_position', ClipPos)
-fire_dart = rospy.ServiceProxy(
-    'fire_dart', FireDart)
+controller_set_enabled = wrap_blocking_func(rospy.ServiceProxy(
+    'controller/set_enabled', SetEnabled))
+change_clip_position = wrap_blocking_func(rospy.ServiceProxy(
+    'change_clip_position', ClipPos))
+fire_dart = wrap_blocking_func(rospy.ServiceProxy(
+    'fire_dart', FireDart))
 
 pose_topic = TopicReader('pose', PoseStamped)
 
@@ -52,7 +57,7 @@ def go_to_point(point):
     ))
     
     # enable controller
-    yield reactor.callInThread(controller_set_enabled, True)
+    yield controller_set_enabled(True)
     
     # wait until near point
     while True:
@@ -74,7 +79,7 @@ def go_to_point(point):
             break
     
     # disable controller (stops wheels)
-    yield reactor.callInThread(controller_set_enabled, False)
+    yield controller_set_enabled(False)
 
 def sleep(t):
     d = defer.Deferred(canceller=lambda d_: dc.cancel())
