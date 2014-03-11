@@ -218,8 +218,8 @@ def main():
     rospy.init_node('ieee2014_simulator')
     course_length = (97 - 3/4 * 2) * 0.0254
     course_width = (49 - 3/4 * 2) * 0.0254
-    robot = Robot((0.1, 0.3), 0.2)
-    #robot = Robot((-course_length/2 + (6*0.0254), -course_width/2 + ((5+5.25)*0.0254)), 0.0)
+    #robot = Robot((0.1, 0.3), 0.2)
+    robot = Robot((-course_length/2 + (6*0.0254), -course_width/2 + ((5+5.25+(3/4))*0.0254)), 0.0)
 
     dynamixels = Dynamixel()
     course = [

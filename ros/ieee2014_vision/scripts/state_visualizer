@@ -48,14 +48,14 @@ def cv_to_pygame(image):
 	#np cv mat -> pygame image
 	return pygame.image.frombuffer(image.tostring(), image.shape[1::-1], "RGB")
 class Arc(object):
-	def __init__(self, center, radius, (start_angle,stop_angle)):
+	def __init__(self, center, radius, (start_angle,stop_angle), thickness):
 		self.center = center
 		self.radius = radius
 		self.start_angle = start_angle
 		self.stop_angle = stop_angle
-
+		self.thickness = thickness
 	def draw(self, display):
-		pygame.draw.circle(display, (255, 255, 255), round_point(self.center), int(SCALE*self.radius), 3)
+		pygame.draw.circle(display, (255, 255, 255), round_point(self.center), int(SCALE*self.radius), self.thickness)
 
 
 class Line(object):
@@ -76,16 +76,19 @@ class Robot(object):
 		self.pan = 0.0
 		self.targ_tilt = 0.0
 		self.targ_pan = 0.0
-		
+		self.debug = rospy.get_param('~/state_visualizer/debug', "N")
 		sim = rospy.get_param('~/state_visualizer/sim', "N")
 		if(sim == 'Y'):
 			rospy.loginfo("\nNOTE: state_visualizer Using simulation pose data")
 			self.poseSub = rospy.Subscriber('sim_pose', PoseStamped, self.set_pose)
 			#if not '/ieee2014
 			
-			
-			self.pan_sub = rospy.Subscriber('/pan_controller/command',Float64, self.sim_set_pan) 
-			self.tilt_sub = rospy.Subscriber('/tilt_controller/command',Float64, self.sim_set_tilt)
+			if self.debug == 'N':
+				self.pan_sub = rospy.Subscriber('/pan_controller/command',Float64, self.sim_set_pan) 
+				self.tilt_sub = rospy.Subscriber('/tilt_controller/command',Float64, self.sim_set_tilt)
+			else:
+				self.pan_sub = rospy.Subscriber('/pan_controller/state', JointState, self.set_pan)
+				self.tilt_sub = rospy.Subscriber('/tilt_controller/state', JointState, self.set_tilt)
 			
 		elif(sim == 'N'):
 			rospy.loginfo("\nNOTE: state_visualizer NOT simulating")
@@ -189,9 +192,11 @@ def main():
 		Line((+course_length/2, -course_width/2), (-course_length/2, -course_width/2)),
 		Line((-course_length/2, -course_width/2), (-course_length/2, +course_width/2)),
 		
-		Line(cvtLogical_to_Forrest((35.25*0.0254, 0)), cvtLogical_to_Forrest((35.25*0.0254, course_width)), 4),
-		Line(cvtLogical_to_Forrest((57.75*0.0254, 0)), cvtLogical_to_Forrest((57.75*0.0254, course_width)), 4),
-		Arc((-course_length/2, 0), 49*0.0245, (0,180)),
+		Line(cvtLogical_to_Forrest((35.25*0.0254, 0)), cvtLogical_to_Forrest((35.25*0.0254, course_width)), 6),
+		Line(cvtLogical_to_Forrest((57.75*0.0254, 0)), cvtLogical_to_Forrest((57.75*0.0254, course_width)), 6),
+		Arc((-course_length/2, 0), 49*0.0245, (0,180),6),
+		
+		Line(cvtLogical_to_Forrest((12*0.0254, 9.88*0.0254)), cvtLogical_to_Forrest((course_length,9.88*0.0254)), 6),
 		
 		robot,
 		blockHandler()
