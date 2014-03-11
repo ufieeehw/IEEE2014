@@ -4,6 +4,42 @@ import os
 #import sys
 #import traceback
 #sys.path.insert(0,"./IEEE2014Functions")
+#Coordinate Axis ASCII art
+#< is the camera
+#    Y (Height)
+# X+ |
+#  \ |
+#<__\|__________Z+(Dist)
+#    \
+#    |\
+#    | \
+
+
+#(0,0)
+#__________________(img.shape[1], 0)
+#|
+#|
+#|
+#|
+#|                
+#|
+#|
+#|						.<- (img.shape[1],img.shape[0])
+#(0,img.shape[0])
+
+
+#           +imY	
+#           |
+#           |
+#           |
+#           |
+#+imx_______.(0,0)_______
+#           |
+#           |
+#           |
+#           |
+#           |
+
 try:
 	from IEEE2014Functions import backgroundEliminator as be
 except:
@@ -20,8 +56,8 @@ def spotBlocks(img=None, debug=False):
 		#img = cv2.imread(path + '/Debug/IEEEcourseMarch2-2.png')
 		img = cv2.imread(path + '/Debug/frame0000.jpg')
 		assert img != None, "Image read failed"
-			
-		
+	
+
 		#cv2.imshow('image',img)
 	#Notable parameters
 	cameraHeight = 8.25 #inches (Gun v2)
@@ -35,7 +71,7 @@ def spotBlocks(img=None, debug=False):
 	minimumArea = 20
 	#Discrimination by area is not reliable on the far lower bound
 
-	img = cv2.GaussianBlur(img, (3, 3), sigmaX = 1, sigmaY = 1)
+	img = cv2.GaussianBlur(img, (7, 7), sigmaX = 1, sigmaY = 1)
 	bkelim = be.eliminateBackground(img)
 
 
@@ -69,42 +105,6 @@ def spotBlocks(img=None, debug=False):
 				#cv2.circle(F,(cx,cy), int(area/100), (0,0,255), thickness=-1)
 				centerofMass.append((cx,cy))
 				#Need to control for 'rectangleness' - OR: remove non-course background
-
-	#Coordinate Axis ASCII art
-	#< is the camera
-	#    Y (Height)
-	# X+ |
-	#  \ |
-	#<__\|__________Z+(Dist)
-	#    \
-	#    |\
-	#    | \
-
-
-	#(0,0)
-	#__________________(img.shape[1], 0)
-	#|
-	#|
-	#|
-	#|
-	#|                
-	#|
-	#|
-	#|						.<- (img.shape[1],img.shape[0])
-	#(0,img.shape[0])
-	
-
-	#           +imY	
-	#           |
-	#           |
-	#           |
-	#           |
-	#+imx_______.(0,0)_______
-	#           |
-	#           |
-	#           |
-	#           |
-	#           |
 
 	#dispimg = cv2.pyrUp(cv2.pyrUp(cleanedImage))
 	#cv2.circle(dispimg, (cleanedImage.shape[1]*2,cleanedImage.shape[0]*2), 10, (255,0,100),thickness = -1)
@@ -176,7 +176,7 @@ if __name__ == '__main__':
 
 				
 		cleanedImage = cv2.GaussianBlur(cropped, (3,3), sigmaX = 1, sigmaY = 1)
-		positions,com = spotBlocks(cleanedImage)
+		positions,com = spotBlocks(cropped)
 		#print positions
 		for k in range(len(positions)):
 			cm = com[k]

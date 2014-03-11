@@ -1,0 +1,24 @@
+#!/usr/bin/env python
+
+from std_msgs.msg import Bool
+from ieee2014_vision.srv import *
+import rospy
+import sys
+
+if __name__=="__main__":
+	#print sys.argv[1]
+	rospy.wait_for_service('Detect_Blocks')
+	useBool = True
+	if sys.argv[1] > 1:
+		print "Sending a true"
+		useBool = True
+	else:
+		print "Sending a false"
+		useBool = False
+	
+
+	service = rospy.ServiceProxy('Detect_Blocks', Detect_Blocks)
+	start_msg = Detect_Blocks()
+	start_msg.enable = Bool(True)
+	service(useBool)
+	#service(start_msg)

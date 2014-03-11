@@ -12,10 +12,10 @@ from sensor_msgs.msg import Image
 
 
 class image_sender:
-	def __init__(self):
+	def __init__(self, name="Camera"):
 
 		#cv_image = bridge.imgmsg_to_cv(image_message, desired_encoding="passthrough")
-		self.im_pub = rospy.Publisher('Camera', Image)
+		self.im_pub = rospy.Publisher(name, Image)
 		self.bridge = CvBridge()	
 
 	
@@ -26,6 +26,21 @@ class image_sender:
 		except CvBridgeError, e:
 			print e
 
+class image_reciever(object):
+	def __init__(self, name="Camera"):
+		self.im_sub = rospy.Subscriber(name, Image, convert)
+		self.bridge = CvBridge()
+		self.image = None
+	def convert(self, data):
+		try:
+			cv_image = self.bridge.imgmsg_to_cv(data,"bgr8")
+			self.image = cv_image
+		except CvBridgeError, e:
+			print e
+				
+	#@property
+	#def image(self):
+	#	return cv_image = self.bridge.imgmsg_to_cv(data,"bgr8")
 	
 def main():
 	imsend = image_sender()
