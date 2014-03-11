@@ -5,12 +5,14 @@
  *  Author: Khaled
  */ 
 
+#include <avr/io.h>
 #include "tcs34725.h"
 #include "uart.h"
 
 static bool _tcs34725Initialised;
 static tcs34725Gain_t _tcs34725Gain;
 static tcs34725IntegrationTime_t _tcs34725IntegrationTime;
+static PORT_t &twi_port = PORTD;
 
 static inline void write8(uint8_t reg, uint8_t value){
 	twi_write_byte(TCS34725_ADDRESS, (TCS34725_COMMAND_BIT | reg), value);
@@ -30,6 +32,8 @@ static uint16_t read16(uint8_t reg){
 
 
 bool tcs_init(void){
+	twi_port.DIRSET = _BV(2); // set LED control pin to output
+	twi_port.OUTCLR = _BV(2); // set LED control pin to default low
 	uint8_t id = read8(TCS34725_ID);
 	
 	if(id != TCS34725_EXPECTED_ID){
@@ -39,13 +43,13 @@ bool tcs_init(void){
 	_tcs34725Initialised = true;
 	
 	/* Set default integration time and gain, as per Adafruit_TCS34725.h */
-	/* Are these really the defaults? 
-	tcs_setIntegrationTime(TCS34725_INTEGRATIONTIME_2_4MS);
-	tcs_setGain(TCS34725_GAIN_1X);
-	*/
+	/* Are these really the defaults? */ 
+	tcs_setIntegrationTime(TCS34725_INTEGRATIONTIME_50MS);
+	tcs_setGain(TCS34725_GAIN_16X);
+	/*
 	tcs_setIntegrationTime(TCS34725_INTEGRATIONTIME_50MS);
 	tcs_setGain(TCS34725_GAIN_4X);
-	
+	*/
 	
 	/* Note: by default, the device is in power down mode on bootup */
 	write8(TCS34725_ENABLE, TCS34725_ENABLE_PON);
@@ -156,13 +160,15 @@ void tcs_setInterrupt(bool i) {
 	write8(TCS34725_ENABLE, r);
 }
 
-void tcs_get_raw_data_handler(char* messsag, uint8_t len) {
+void tcs_get_raw_data_handler(char* messsage, uint8_t len) {
 	char buffer[8];
 	uint16_t colorVals[4];
-	tcs_getRawData(&colorVals[0], &colorVals[1], &colorVals[2], &colorVals[3]);
-	for(int i = 0; i < 4; i++)
-		for(int j = 0; j < 2; j++)
-			buffer[i+j] = ((colorVals[i] >> 8*j) & 0xFF);
+	tcs_getRawData(&colorVals[0], &colorVals[1], &colorVals[2], &colorVals[3]); // r, g, b, c
+
+	for(int i = 0; i < 8; i+=2){
+		buffer[i] = (colorVals[i>>1] & 0xFF);
+		buffer[i+1] = ((colorVals[i>>1] >> 8) & 0xFF);
+	}
 	uart_send_msg_block(TCSGetRawData, buffer, 9);
 }
 

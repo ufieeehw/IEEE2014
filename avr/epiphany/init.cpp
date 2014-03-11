@@ -6,11 +6,13 @@
 #include "hwlib/motor.h"
 #include "hwlib/clock.h"
 #include "hwlib/twi.h"
+#include "hwlib/tcs34725.h"
 
 void init() {
 	init_clocks();
 	init_modules();
 	init_interrupts();
+	tcs_init();
 }
 
 void init_interrupts() {

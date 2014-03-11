@@ -18,9 +18,9 @@
 
 
 // Configuration Values
-#define TWI_MASTER_VECT TWIC_TWIM_vect
-static PORT_t &twi_port = PORTC;
-static TWI_t &twi = TWIC;
+#define TWI_MASTER_VECT TWID_TWIM_vect
+static PORT_t &twi_port = PORTD;
+static TWI_t &twi = TWID;
 static const uint16_t twi_freq = 50000;
 
 
@@ -28,6 +28,8 @@ static const uint16_t twi_freq = 50000;
 void twi_init_master() {
 	// Setup general configuration values.
 	twi_port.DIRSET = 0x03;
+	twi_port.PIN0CTRL |= PORT_OPC_PULLUP_gc; // enable pullup resistor on SDA
+	twi_port.PIN1CTRL |= PORT_OPC_PULLUP_gc; // enable pullup resistor on SCL
 	twi.MASTER.BAUD = TWI_BAUDRATE(twi_freq);
 	twi.MASTER.CTRLA = TWI_MASTER_INTLVL_LO_gc | TWI_MASTER_RIEN_bm | TWI_MASTER_WIEN_bm | TWI_MASTER_ENABLE_bm;
 	twi.MASTER.STATUS = TWI_MASTER_BUSSTATE_IDLE_gc;

@@ -19,7 +19,7 @@
 
 
 typedef void (*HandlerPointer)(char*, uint8_t);
-extern HandlerPointer HandlerPointers[10] = {
+HandlerPointer HandlerPointers[10] = {
 	NULL,						// 0x00 AckValid
 	NULL,						// 0x01 AckInvalid
 	uart_echo_request,			// 0x02
