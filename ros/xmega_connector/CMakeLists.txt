@@ -57,6 +57,7 @@ add_service_files(
   Echo.srv
   SetWheelSpeeds.srv
   GetOdometry.srv
+  GetColor.srv
 #  Service2.srv
 )
 

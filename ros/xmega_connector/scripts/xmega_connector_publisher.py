@@ -139,6 +139,28 @@ def get_odometry_service(odo_req):
 
 	return service_response
 
+def get_color_service(color_req):
+        xmega_lock.acquire(True)
+        packet = XMEGAPacket()
+        packet.msg_type = 0x09
+        packet.msg_length = 1
+
+        connector_object.send_packet(packet)
+
+        response_packet = connector_object.read_packet()
+        red, green, blue, clear = struct.unpack("<HHHH", response_packet.msg_body)
+        print "red:{0} green:{1} blue:{2} clear:{3}".format(red, green, blue, clear)
+        connector_object.send_ack()
+
+        service_response = GetColorResponse()
+        service_response.red = red
+        service_response.green = green
+        service_response.blue = blue
+        service_response.clear = clear
+        xmega_lock.release()
+
+        return service_response
+
 
 INCH = 25.4e-3
 width =  9.345*INCH
@@ -171,6 +193,7 @@ def trajectory_to_wheel_speeds(msg):
 rospy.Service('~echo', Echo, echo_service)
 rospy.Service('~set_wheel_speeds', SetWheelSpeeds, set_wheel_speed_service)
 rospy.Service('~get_odometry', GetOdometry, get_odometry_service)
+rospy.Service('~get_color', GetColor, get_color_service)
 rospy.Subscriber('/twist', TwistStamped, trajectory_to_wheel_speeds)
 odom_pub = rospy.Publisher('odom', PoseStamped)
 
