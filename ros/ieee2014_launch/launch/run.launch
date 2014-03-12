@@ -26,6 +26,6 @@
   <node name="maestro_driver" pkg="ieee2014_maestro" type="maestro_controller.py" respawn="true"/>
 
   <include file="$(find ieee2014_tf_broadcaster)/launch/tf_broadcaster.launch"/>
-  <node name="tf_target_solver" pkg="ieee2014_tf_target_solver" type="ieee2014_tf_target_solver.py" respawn="true"/>
+  <node name="target_solver" pkg="ieee2014_tf_target_solver" type="ieee2014_tf_target_solver.py" respawn="true"/>
 
 </launch>

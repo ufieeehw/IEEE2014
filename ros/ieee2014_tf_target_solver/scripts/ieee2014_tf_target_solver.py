@@ -12,6 +12,8 @@ from geometry_msgs.msg import PoseStamped
 from dynamixel_msgs.msg import JointState
 from std_msgs.msg import Float64
 
+from ieee2014_controller.srv import SetEnabled, SetEnabledResponse
+
 def spherical_from_cartesian(x, y, z):
     r = math.sqrt(x**2 + y**2 + z**2)               #r
     elev = math.atan2(z, math.sqrt(x**2 + y**2))    #theta
@@ -32,7 +34,12 @@ if __name__ == '__main__':
 
     pan_pub = rospy.Publisher('/{0}pan_controller/command'.format(prefix), Float64)
     tilt_pub = rospy.Publisher('/{0}tilt_controller/command'.format(prefix), Float64)
-    enabled = True
+    enabled = False
+    def set_enabled(req):
+        global enabled
+        enabled = req.enabled
+        return SetEnabledResponse()
+    rospy.Service('~set_enabled', SetEnabled, set_enabled)
 
     hz = 10.0
     dt = 1.0/hz
