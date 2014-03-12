@@ -8,14 +8,14 @@ from twisted.internet import reactor, defer
 import rospy
 from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
 from sensor_msgs.msg import Image
-from std_msgs.msg import Header
+from std_msgs.msg import Header, Float64
 from tf import transformations
 
 from ieee2014_controller.srv import SetEnabled
 from ieee2014_maestro.srv import ClipPos, FireDart
 
 import ieee2014_mission_runner
-from ieee2014_mission_runner import fine_targeting
+from ieee2014_mission_runner import coarse_targeting, fine_targeting
 
 rospy.init_node('ieee2014_mission_runner')
 
@@ -56,6 +56,18 @@ target_solver_set_enabled = wrap_blocking_func(rospy.ServiceProxy(
     'target_solver/set_enabled', SetEnabled, persistent=True))
 
 controller_pub = rospy.Publisher('desired_pose', PoseStamped, queue_size=10)
+pan_pub = rospy.Publisher('pan_controller/command', Float64)
+tilt_pub = rospy.Publisher('tilt_controller/command', Float64)
+
+@defer.inlineCallbacks
+def set_pan_tilt(pan, tilt):
+    pan_pub.publish(Float64(
+        data=pan % (2 * math.pi),
+    ))
+    tilt_pub.publish(Float64(
+        data=tilt % (2 * math.pi),
+    ))
+    yield sleep(1) # it can take longer than this
 
 @defer.inlineCallbacks
 def go_to_point(point, angle=0):
@@ -133,19 +145,20 @@ def main():
     yield go_to_point(start_pos + numpy.array([0.2, 0]))
     
     for i, block_position in enumerate(block_positions):
-        yield target_solver_set_enabled(True)
+        coarse_target_task = set_pan_tilt(**coarse_targeting.think(block_position))
+        clip_task = change_clip_position(i+1)
         yield turn_and_go(block_position)
-        yield target_solver_set_enabled(False)
-        yield change_clip_position(i+1)
+        yield coarse_target_task # should already be done
+        yield clip_task # should already be done
         
         sleep_task = sleep(3)
         
         yield sleep(1) # wait to stop moving
         yield do_fine_targeting()
         
-        yield sleep_task
+        yield sleep_task # wait remainder of 3 seconds
         
-        yield fire_dart(True)
+        yield fire_dart(True) # internally waits 1 second
     yield go_to_point(end_pos)
     yield change_clip_position(4)
 
