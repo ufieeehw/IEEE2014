@@ -101,8 +101,7 @@ class blockHandler:
 		
 		image = None
 		try:
-			image = self.bridge.imgmsg_to_cv(data,"bgr8").getNumpy()
-			print type(image)
+			image = np.array(self.bridge.imgmsg_to_cv(data,"bgr8"))
 			
 		except:
 			print "No image read"
@@ -129,8 +128,6 @@ class blockHandler:
 			path =  os.path.dirname(os.path.abspath(__file__))
 			image = cv2.imread(path + '/Debug/' + image_name + '.jpg')
 			relPositions, imxy = blockSpotter.spotBlocks(image)
-			
-
 			
 				
 		#RelPos <-> (Forward Displacement, Lateral Displacement Left Positive)
