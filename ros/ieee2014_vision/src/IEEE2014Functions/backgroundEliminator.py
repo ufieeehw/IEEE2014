@@ -129,7 +129,7 @@ if __name__=='__main__':
 	#input = cv2.imread('../Implementation/myalgo2099447.jpg')
 	
 	path = os.path.dirname(os.path.abspath(__file__))
-        path = os.path.abspath(os.path.join(path,".."))
+	path = os.path.abspath(os.path.join(path,".."))
 	#img = cv2.imread(path + '/Debug/IEEEcourseMarch2-2.png')
         if len(sys.argv) > 1:
                 pos = sys.argv[1]

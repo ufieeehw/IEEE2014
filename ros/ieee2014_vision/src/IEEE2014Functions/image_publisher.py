@@ -5,6 +5,7 @@ import time
 import numpy as np
 import os, string
 import cv2, cv
+import sys
 from cv_bridge import CvBridge, CvBridgeError
 from sensor_msgs.msg import Image
 #To use this, run it, and then on the machine you'd like to view the images do
@@ -43,9 +44,9 @@ class image_reciever(object):
 	#	return cv_image = self.bridge.imgmsg_to_cv(data,"bgr8")
 	
 def main():
-	imsend = image_sender()
-	rospy.init_node('camera')
 	
+	rospy.init_node('camera')
+	imsend = image_sender()
 	cam = cv2.VideoCapture(0)	
 
 	targetResolution = (640,360)
@@ -62,12 +63,23 @@ def main():
 					
 				imsend.send_message(frame)
 			else:
+				print "Failed Camera Read"
+				if len(sys.argv) > 1:
+					if not '_' in sys.argv[1]:
+						image_name = sys.argv[1]
+					else:
+						image_name = 'frame0000'	
+				else:
+					image_name = 'frame0000'
+				path =  os.path.dirname(os.path.abspath(__file__))
+				path = os.path.abspath(os.path.join(path,".."))
+				image = cv2.imread(path + '/Debug/' + image_name + '.jpg')
+				imsend.send_message(image)
+			
 
-				rospy.loginfo("FAIL Camera Read")
-			#rospy.sleep(0.5)
-			#rospy.spin()
 		except KeyboardInterrupt:
 			print "Shutting Down"
+			
 if __name__ == '__main__':
 	main()
 
