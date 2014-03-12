@@ -1,0 +1,6 @@
+* Use forward vector instead of angle everywhere possible - should speed up things
+* Use rotation matrix instead of getForward/LeftVector
+* Cache forward/left vector
+* Expand lidar messages to one per beam
+	* configurable random dropping
+* modulate number of particles to target cpu time
