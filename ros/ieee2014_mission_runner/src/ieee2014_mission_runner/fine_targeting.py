@@ -1,107 +1,169 @@
 from __future__ import division
 
+import math
+import operator
 import sys
-
-import roslib
 
 import numpy
 import cv2
 
-def fix(x):
+import roslib
+from tf import transformations
+
+from ieee2014_mission_runner import render
+
+def product(x):
+    return reduce(operator.mul, x)
+
+def normalize(x):
     return (x - numpy.min(x))/(numpy.max(x) - numpy.min(x))
 
 def is_opaque(pixel):
     return pixel[3] >= 128
 
-def templateify(img_with_alpha):
-    # result must be 0 where template is transparent
-    # sum of result must be 0
-    # scale of result doesn't matter
-    # scale and bias of input shouldn't matter
-    print img_with_alpha.shape
-    print img_with_alpha[0, 0]
-    
-    opaque_pixels = [pixel[:3].astype(int)
-        for row in img_with_alpha
-        for pixel in row
-        if is_opaque(pixel)]
-    mean = sum(opaque_pixels)/len(opaque_pixels)
-    
-    res = numpy.array([
-        [pixel[:3] - mean if is_opaque(pixel) else [0, 0, 0] for pixel in row]
-    for row in img_with_alpha])
-    
-    return res # floating point 3-channel image
-
-#img = cv2.imread(sys.argv[1])
-#cv2.imshow("img", img)
-
-template_path = roslib.packages.resource_file('ieee2014_mission_runner', 'data', 'template.png')
-template_src = cv2.imread(template_path, -1)
-#cv2.imshow("template_src", template_src)
-template = templateify(template_src)
-#cv2.imshow("template_fixed", fix(template))
-
-#print map(cv2.getOptimalDFTSize, img.shape)
-
-def pad(x, resulting_size, borderType=cv2.BORDER_REPLICATE, value=None):
+def pad(x):
     return cv2.copyMakeBorder(x,
-        (resulting_size[0] - x.shape[0])//2, (resulting_size[0] - x.shape[0])//2,
-        (resulting_size[1] - x.shape[1])//2, (resulting_size[1] - x.shape[1])//2,
-        borderType, value=value), ((resulting_size[0] - x.shape[0])//2, (resulting_size[1] - x.shape[1])//2)
-def set_padding_to(x, start_size, value):
-    x = x.copy()
-    resulting_size = x.shape
-    keep = x[
-        (resulting_size[0] - start_size[0])//2:(resulting_size[0] + start_size[0])//2,
-        (resulting_size[1] - start_size[1])//2:(resulting_size[1] + start_size[1])//2,
-    ].copy()
-    x[:,:] = value
-    x[
-        (resulting_size[0] - start_size[0])//2:(resulting_size[0] + start_size[0])//2,
-        (resulting_size[1] - start_size[1])//2:(resulting_size[1] + start_size[1])//2,
-    ] = keep
-    return x
+        0, x.shape[0],
+        0, x.shape[1],
+        cv2.BORDER_CONSTANT, value=(0, 0, 0))
 
-def get(img):
-    size = img.shape[0]*2, img.shape[1]*2
-    img_padded, img_padded_padding = pad(img, size, cv2.BORDER_CONSTANT, (255*2//3, 255//3, 255//3))
-    template_padded, _ = pad(template, size, cv2.BORDER_CONSTANT, (0., 0., 0.))
-    template_padded = numpy.roll(numpy.roll(template_padded, template_padded.shape[1]//2, 1), template_padded.shape[0]//2, 0)
-    
-    print img_padded.dtype
-    print template_padded.dtype
+def cross_correlate(signal, template):
+    template_padded = pad(template)
+    template_padded_rolled = numpy.roll(numpy.roll(template_padded, -template_padded.shape[1]//4, 1), -template_padded.shape[0]//4, 0)
+    cv2.imshow('template_padded_rolled', template_padded_rolled)
+    return numpy.fft.ifft2(
+        numpy.fft.fft2(pad(signal)) * numpy.fft.fft2(template_padded_rolled).conj()
+    )[:signal.shape[0], :signal.shape[1]].real
 
-    #cv2.imshow("img_padded", img_padded)
-    #cv2.imshow("template_padded", fix(template_padded))
+class Template(object):
+    def __init__(self, template_img_with_alpha):
+        # result must be 0 where template is transparent
+        # sum of result must be 0
+        # scale of result doesn't matter
+        # scale and bias of input shouldn't matter
+        
+        self._orig = template_img_with_alpha
+        
+        opaque = template_img_with_alpha[:, :, 3] >= 128
+        opaque3 = numpy.dstack([opaque]*3)
+        
+        #opaque_pixels = [pixel[:3].astype(int)
+        #    for row in template_img_with_alpha
+        #    for pixel in row
+        #    if is_opaque(pixel)]
+        mean = numpy.sum(numpy.choose(opaque3, [0, template_img_with_alpha[:, :, :3]]), axis=(0, 1))/numpy.sum(opaque)
+        print mean
+        
+        res = numpy.choose(opaque3, [0, template_img_with_alpha[:, :, :3] - mean])
+        
+        #res = numpy.array([
+        #    [pixel[:3] - mean if is_opaque(pixel) else [0, 0, 0] for pixel in row]
+        #for row in template_img_with_alpha])
+        
+        cv2.imshow('normalize(res)', normalize(res))
+        
+        self._template = res # floating point 3-channel image
+    
+    def match(self, img):
+        assert img.shape == self._template.shape
+        matchness = product(numpy.maximum(0, cross_correlate(img[:,:,c], self._template[:,:,c])) for c in xrange(img.shape[2]))
+        
+        print matchness.dtype
+        cv2.imshow('normalize(matchness)', normalize(matchness))
+        print matchness.shape
+        
+        important = matchness[matchness.shape[0]//4:matchness.shape[0]*3//4, matchness.shape[1]//4:matchness.shape[1]*3//4]
+        
+        important_pos = numpy.unravel_index(numpy.argmax(important), important.shape)
+        pos = important_pos[0] + matchness.shape[0]//4, important_pos[1] + matchness.shape[1]//4
+        
+        moved_template = numpy.roll(numpy.roll(self._orig, pos[0]-self._orig.shape[0]//2, 0), pos[1]-self._orig.shape[1]//2, 1)
+        cv2.imshow('moved_template', moved_template)
+        
+        if True:
+            debug_img = img.copy()
+            debug_img[pos[0]-3:pos[0]+3, pos[1]-3:pos[1]+3] = 0, 0, 0
+            debug_img += moved_template[:,:,:3]
+            cv2.imshow('debug_img', debug_img)
+            cv2.waitKey()
+        
+        '''for y, row in enumerate(template_src):
+            for x, pixel in enumerate(row):
+                if is_opaque(pixel):
+                    img_padded[
+                        pos[0]+y-template.shape[0]//2,
+                        pos[1]+x-template.shape[1]//2,
+                    ] = pixel[:3]
+        #img_padded[pos[0]-5:pos[0]+5,pos[1]-5:pos[1]+5] = (0, 0, 0)
+        cv2.imshow("xy_normalized", normalize(xy))
+        cv2.imshow("img_padded", img_padded)'''
+        
+        return pos[1], pos[0]
 
-    def product(x):
-        import operator
-        return reduce(operator.mul, x)
-    xy = product(numpy.maximum(0, numpy.fft.ifft2(
-        numpy.fft.fft2(img_padded[:,:,c]) * numpy.fft.fft2(template_padded[:,:,c]).conj()
-    ).real) for c in xrange(3))
+INCH = 0.0254
+
+def draw_target(r):
+    square_side_length = 8*INCH
+    r.draw_polygon([
+        (0, +square_side_length/2, +square_side_length/2),
+        (0, -square_side_length/2, +square_side_length/2),
+        (0, -square_side_length/2, -square_side_length/2),
+        (0, +square_side_length/2, -square_side_length/2),
+    ], (0, 0, 255, 255))
     
-    xy -= numpy.min(xy)
+    line_width = 3/4*INCH
+    r.draw_polygon([
+        (0, +square_side_length/2, +line_width/2),
+        (0, -square_side_length/2, +line_width/2),
+        (0, -square_side_length/2, -line_width/2),
+        (0, +square_side_length/2, -line_width/2),
+    ], (255, 255, 255, 255))
+    r.draw_polygon([
+        (0, +line_width/2, +square_side_length/2),
+        (0, -line_width/2, +square_side_length/2),
+        (0, -line_width/2, -square_side_length/2),
+        (0, +line_width/2, -square_side_length/2),
+    ], (255, 255, 255, 255))
     
-    xy = set_padding_to(xy, (img.shape[0]-template.shape[0], img.shape[1]-template.shape[1]), 0)
+    cutout_radius = 5*INCH / 2
+    r.draw_polygon(
+        [(0, cutout_radius*math.cos(angle), cutout_radius*math.sin(angle))
+            for angle in numpy.linspace(0, 2*math.pi, 20, endpoint=False)],
+        (0, 0, 0, 0),
+    )
     
-    pos = numpy.unravel_index(numpy.argmax(xy), size)
-    print pos
-    for y, row in enumerate(template_src):
-        for x, pixel in enumerate(row):
-            if is_opaque(pixel):
-                img_padded[
-                    pos[0]+y-template.shape[0]//2,
-                    pos[1]+x-template.shape[1]//2,
-                ] = pixel[:3]
-     #img_padded[pos[0]-5:pos[0]+5,pos[1]-5:pos[1]+5] = (0, 0, 0)
+    base_width = (3+1/3)*INCH
+    base_height = 5*INCH # arbitrary
+    r.draw_polygon([
+        (0, +base_width/2, -square_side_length/2),
+        (0, -base_width/2, -square_side_length/2),
+        (0, -base_width/2, -square_side_length/2-base_height),
+        (0, +base_width/2, -square_side_length/2-base_height),
+    ], (0, 0, 0, 255))
+
+target_center = numpy.array([
+    -97*INCH / 2 + 1/4*INCH / 2,
+    0,
+    24*INCH + 5*INCH / 2,
+])
+
+if __name__ == '__main__':
+    P = numpy.array([
+        [462.292755126953, 0, 314.173743238696, 0],
+        [0, 466.827423095703, 184.381978537142, 0],
+        [0, 0, 1, 0],
+    ])
+
+    dest = render.make_dest(width=640, height=360)
+    r = render.Renderer(dest, P)
+    r = r.prepend_transform(render.look_at_mat(target_center))
+
+    draw_target(r.prepend_transform(transformations.translation_matrix(target_center)))
     
-    cv2.imshow("xy_fixed", fix(xy))
-    cv2.imshow("img_padded", img_padded)
+    template = Template(dest)
     
-    print 'prepos', pos
-    pos = numpy.array(pos) - img_padded_padding
-    print 'postpos', pos
+    cv2.imshow('dest', dest)
     
-    return pos[1], pos[0]
+    img = cv2.imread(sys.argv[1])
+    
+    print template.match(img)
