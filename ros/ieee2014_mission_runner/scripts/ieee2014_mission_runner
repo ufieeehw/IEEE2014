@@ -7,11 +7,15 @@ from twisted.internet import reactor, defer
 
 import rospy
 from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
+from sensor_msgs.msg import Image
 from std_msgs.msg import Header
 from tf import transformations
 
 from ieee2014_controller.srv import SetEnabled
 from ieee2014_maestro.srv import ClipPos, FireDart
+
+import ieee2014_mission_runner
+from ieee2014_mission_runner import fine_targeting
 
 rospy.init_node('ieee2014_mission_runner')
 
@@ -35,6 +39,7 @@ class TopicReader(object):
         return df
 
 pose_topic = TopicReader('pose', PoseStamped)
+gun_camera_image_topic = TopicReader('gun_camera/image_raw', Image)
 
 def wrap_blocking_func(f):
     def _(*args, **kwargs):
@@ -100,6 +105,18 @@ def sleep(t):
     dc = reactor.callLater(t, d.callback, None)
     return d
 
+import cv2
+from cv_bridge import CvBridge
+bridge = CvBridge()
+@defer.inlineCallbacks
+def do_fine_targeting():
+    img_msg = yield gun_camera_image_topic.get_next_message()
+    img = numpy.array(bridge.imgmsg_to_cv(img_msg, "bgr8"))
+    #cv2.imshow("test", img)
+    res = fine_targeting.get(img)
+    print res
+    yield reactor.callInThread(cv2.waitKey)
+
 @defer.inlineCallbacks
 def main():
     # XXX wait for start
@@ -123,7 +140,8 @@ def main():
         
         sleep_task = sleep(3)
         
-        # XXX centering TODO
+        yield sleep(1) # wait to stop moving
+        yield do_fine_targeting()
         
         yield sleep_task
         
