@@ -48,7 +48,7 @@ def pad(x, resulting_size, borderType=cv2.BORDER_REPLICATE, value=None):
     return cv2.copyMakeBorder(x,
         (resulting_size[0] - x.shape[0])//2, (resulting_size[0] - x.shape[0])//2,
         (resulting_size[1] - x.shape[1])//2, (resulting_size[1] - x.shape[1])//2,
-        borderType, value=value)
+        borderType, value=value), ((resulting_size[0] - x.shape[0])//2, (resulting_size[1] - x.shape[1])//2)
 def set_padding_to(x, start_size, value):
     x = x.copy()
     resulting_size = x.shape
@@ -65,8 +65,8 @@ def set_padding_to(x, start_size, value):
 
 def get(img):
     size = img.shape[0]*2, img.shape[1]*2
-    img_padded = pad(img, size, cv2.BORDER_CONSTANT, (255*2//3, 255//3, 255//3))
-    template_padded = pad(template, size, cv2.BORDER_CONSTANT, (0., 0., 0.))
+    img_padded, img_padded_padding = pad(img, size, cv2.BORDER_CONSTANT, (255*2//3, 255//3, 255//3))
+    template_padded, _ = pad(template, size, cv2.BORDER_CONSTANT, (0., 0., 0.))
     template_padded = numpy.roll(numpy.roll(template_padded, template_padded.shape[1]//2, 1), template_padded.shape[0]//2, 0)
     
     print img_padded.dtype
@@ -100,4 +100,8 @@ def get(img):
     cv2.imshow("xy_fixed", fix(xy))
     cv2.imshow("img_padded", img_padded)
     
-    return pos
+    print 'prepos', pos
+    pos = numpy.array(pos) - img_padded_padding
+    print 'postpos', pos
+    
+    return pos[1], pos[0]

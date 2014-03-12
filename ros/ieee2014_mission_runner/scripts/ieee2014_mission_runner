@@ -3,13 +3,14 @@
 import math
 
 import numpy
-from twisted.internet import reactor, defer
+from twisted.internet import reactor, defer, threads
 
 import rospy
 from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
-from sensor_msgs.msg import Image
+from sensor_msgs.msg import Image, CameraInfo
 from std_msgs.msg import Header, Float64
 from tf import transformations
+import image_geometry
 
 from ieee2014_controller.srv import SetEnabled
 from ieee2014_maestro.srv import ClipPos, FireDart
@@ -43,22 +44,28 @@ class TopicReader(object):
         return df
 
 pose_topic = TopicReader('pose', PoseStamped)
-gun_camera_image_topic = TopicReader('gun_camera/image_raw', Image)
+gun_camera_image_topic = TopicReader('gun_camera/image_rect_color', Image)
+gun_camera_info_topic = TopicReader('gun_camera/camera_info', CameraInfo)
 block_topic = TopicRead('block_positions', BlockPositions)
 
 def wrap_blocking_func(f):
     def _(*args, **kwargs):
-        return reactor.callInThread(f, *args, **kwargs)
+        return threads.deferToThread(f, *args, **kwargs)
     return _
 
 controller_set_enabled = wrap_blocking_func(rospy.ServiceProxy(
     'controller/set_enabled', SetEnabled, persistent=True))
-change_clip_position = wrap_blocking_func(rospy.ServiceProxy(
+raw_change_clip_position = wrap_blocking_func(rospy.ServiceProxy(
     'change_clip_position', ClipPos, persistent=True))
 fire_dart = wrap_blocking_func(rospy.ServiceProxy(
     'fire_dart', FireDart, persistent=True))
 target_solver_set_enabled = wrap_blocking_func(rospy.ServiceProxy(
     'target_solver/set_enabled', SetEnabled, persistent=True))
+
+@defer.inlineCallbacks
+def change_clip_position(pos):
+    yield raw_change_clip_position(pos)
+    yield sleep(1)
 
 controller_pub = rospy.Publisher('desired_pose', PoseStamped, queue_size=10)
 pan_pub = rospy.Publisher('pan_controller/command', Float64)
@@ -134,13 +141,33 @@ import cv2
 from cv_bridge import CvBridge
 bridge = CvBridge()
 @defer.inlineCallbacks
-def do_fine_targeting():
+def do_fine_targeting(current_angles):
+    camera_info = yield gun_camera_info_topic.get_next_message()
+    camera_model = image_geometry.PinholeCameraModel(); camera_model.fromCameraInfo(camera_info)
+    
     img_msg = yield gun_camera_image_topic.get_next_message()
     img = numpy.array(bridge.imgmsg_to_cv(img_msg, "bgr8"))
-    #cv2.imshow("test", img)
     res = fine_targeting.get(img)
-    print res
-    yield reactor.callInThread(cv2.waitKey)
+    
+    x = camera_model.projectPixelTo3dRay(res)
+    
+    
+    #yield sleep(5)
+    print x
+    
+    delta_pan = -math.asin(x[0])
+    delta_tilt = -math.asin(x[1]) - 0.03
+    
+    yield set_pan_tilt(
+        pan=current_angles['pan'] + delta_pan,
+        tilt=current_angles['tilt'] + delta_tilt,
+    )
+    #yield sleep(5)
+    
+    img_msg = yield gun_camera_image_topic.get_next_message()
+    img = numpy.array(bridge.imgmsg_to_cv(img_msg, "bgr8"))
+    cv2.imshow("post-fine targeting", img)
+    #yield threads.deferToThread(cv2.waitKey)
 
 @defer.inlineCallbacks
 def main():
@@ -181,18 +208,19 @@ def main():
     yield go_to_point(start_pos + numpy.array([0.2, 0]))
     
     for i, block_position in enumerate(block_positions):
-        coarse_target_task = set_pan_tilt(**coarse_targeting.think(block_position))
-        clip_task = change_clip_position(i+1)
+        coarse_angles = coarse_targeting.think(block_position)
+        coarse_target_task = set_pan_tilt(**coarse_angles)
         yield turn_and_go(block_position)
-        yield coarse_target_task # should already be done
-        yield clip_task # should already be done
         
         sleep_task = sleep(3)
         
-        yield sleep(1) # wait to stop moving
-        yield do_fine_targeting()
+        yield coarse_target_task # should already be done
+        yield sleep(2) # wait to stop moving
+        yield do_fine_targeting(coarse_angles)
         
         yield sleep_task # wait remainder of 3 seconds
+        
+        yield change_clip_position(i+1)
         
         yield fire_dart(True) # internally waits 1 second
     yield go_to_point(end_pos)
