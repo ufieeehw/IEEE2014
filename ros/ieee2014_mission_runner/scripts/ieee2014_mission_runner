@@ -2,16 +2,21 @@
 
 import math
 
+import numpy
 from twisted.internet import reactor, defer
 
 import rospy
 from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
 from std_msgs.msg import Header
+from tf import transformations
 
 from ieee2014_controller.srv import SetEnabled
 from ieee2014_maestro.srv import ClipPos, FireDart
 
 rospy.init_node('ieee2014_mission_runner')
+
+xyzw_array = lambda o: numpy.array([o.x, o.y, o.z, o.w])
+xy_array = lambda o: numpy.array([o.x, o.y])
 
 class TopicReader(object):
     def __init__(self, topic_name, topic_type):
@@ -37,16 +42,18 @@ def wrap_blocking_func(f):
     return _
 
 controller_set_enabled = wrap_blocking_func(rospy.ServiceProxy(
-    'controller/set_enabled', SetEnabled))
+    'controller/set_enabled', SetEnabled, persistent=True))
 change_clip_position = wrap_blocking_func(rospy.ServiceProxy(
-    'change_clip_position', ClipPos))
+    'change_clip_position', ClipPos, persistent=True))
 fire_dart = wrap_blocking_func(rospy.ServiceProxy(
-    'fire_dart', FireDart))
+    'fire_dart', FireDart, persistent=True))
+target_solver_set_enabled = wrap_blocking_func(rospy.ServiceProxy(
+    'target_solver/set_enabled', SetEnabled, persistent=True))
 
 controller_pub = rospy.Publisher('desired_pose', PoseStamped, queue_size=10)
 
 @defer.inlineCallbacks
-def go_to_point(point):
+def go_to_point(point, angle=0):
     # sent point to controller
     def send_point():
         controller_pub.publish(PoseStamped(
@@ -55,7 +62,7 @@ def go_to_point(point):
             ),
             pose=Pose(
                 position=Point(point[0], point[1], 0),
-                orientation=Quaternion(0, 0, 0, 1),
+                orientation=Quaternion(*transformations.quaternion_from_euler(0, 0, angle)),
             ),
         ))
     send_point()
@@ -64,18 +71,29 @@ def go_to_point(point):
     yield controller_set_enabled(True)
     
     # wait until near point
+    last_bad_time = rospy.Time.now()
     while True:
         send_point() # just to make sure...
         msg = yield pose_topic.get_next_message()
-        distance = math.hypot(
-            msg.pose.position.x - point[0],
-            msg.pose.position.y - point[1])
-        print distance
-        if distance < 0.03:
+        distance = numpy.linalg.norm(xy_array(msg.pose.position) - point)
+        angle_error = angle - transformations.euler_from_quaternion(xyzw_array(msg.pose.orientation))[2]
+        while angle_error > +math.pi: angle_error -= 2*math.pi
+        while angle_error < -math.pi: angle_error += 2*math.pi
+        if distance > 0.05 or abs(angle_error) > 0.1:
+            last_bad_time = rospy.Time.now()
+        if rospy.Time.now() - last_bad_time > rospy.Duration(0.5):
             break
     
     # disable controller (stops wheels)
     yield controller_set_enabled(False)
+
+@defer.inlineCallbacks
+def turn_and_go(point):
+    pose = yield pose_topic.get_next_message()
+    angle = math.atan2(*(point - xy_array(pose.pose.position))[::-1])
+    yield go_to_point(xy_array(pose.pose.position), angle)
+    yield go_to_point(point, angle)
+    yield go_to_point(point, 0)
 
 def sleep(t):
     d = defer.Deferred(canceller=lambda d_: dc.cancel())
@@ -84,20 +102,32 @@ def sleep(t):
 
 @defer.inlineCallbacks
 def main():
+    # XXX wait for start
+    
+    # XXX look for blocks, fill in block_positions
     start_pos = (-1.09, -0.34)
     block_positions = [
-        (-0.30, -0.11),
-        (-0.10,  0.33),
-        (+0.29, -0.18),
+        (-0.30, +0.19),
+        (-0.00, -0.18),
+        (+0.32, +0.20),
     ]
     end_pos = (1.03, -0.40)
     
+    yield go_to_point(start_pos + numpy.array([0.2, 0]))
+    
     for i, block_position in enumerate(block_positions):
-        yield go_to_point(block_position)
+        yield target_solver_set_enabled(True)
+        yield turn_and_go(block_position)
+        yield target_solver_set_enabled(False)
         yield change_clip_position(i+1)
-        yield sleep(3)
+        
+        sleep_task = sleep(3)
+        
+        # XXX centering TODO
+        
+        yield sleep_task
+        
         yield fire_dart(True)
-        yield sleep(1)
     yield go_to_point(end_pos)
     yield change_clip_position(4)
 
