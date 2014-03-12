@@ -1,0 +1,31 @@
+<launch>
+
+  <group ns="gun_camera">
+    <node name="driver" pkg="gscam" type="gscam" respawn="true">
+      <param name="camera_name" value="gun_camera"/>
+      <remap from="camera/image_raw" to="image_raw"/>
+      <remap from="camera/camera_info" to="camera_info"/>
+      <env name="GSCAM_CONFIG" value="
+        v4l2src device=/dev/video0 !
+        video/x-raw-rgb,framerate=10/1,width=640,height=360 !
+        ffmpegcolorspace"/>
+    </node>
+  </group>
+
+  <include file="$(find xmega_connector)/launch/xmega_connector.launch"/>
+
+  <include file="$(find xv11_driver)/launch/xv11_driver.launch"/>
+
+  <include file="$(find ieee2014_localization)/launch/particle_filter.launch"/>
+
+  <include file="$(find dynamixel_shooter)/launch/controller_manager.launch"/>
+  <include file="$(find dynamixel_shooter)/launch/start_pan_tilt_controller.launch"/>
+
+  <node name="controller" pkg="ieee2014_controller" type="controller" respawn="true"/>
+
+  <node name="maestro_driver" pkg="ieee2014_maestro" type="maestro_controller.py" respawn="true"/>
+
+  <include file="$(find ieee2014_tf_broadcaster)/launch/tf_broadcaster.launch"/>
+  <node name="tf_target_solver" pkg="ieee2014_tf_target_solver" type="ieee2014_tf_target_solver.py" respawn="true"/>
+
+</launch>

@@ -1,0 +1,8 @@
+<!-- -*- mode: XML -*- -->
+
+<launch>
+    <node pkg="ieee2014_localization" type="ieee2014_localization_node" name="ieee2014_localization_node" respawn="true" output="screen" args="lidar:=/laser_measurements">
+        <remap from="lidar" to="laser_measurements"/>
+    </node>
+</launch>
+
