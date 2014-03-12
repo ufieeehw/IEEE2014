@@ -15,8 +15,14 @@
 
 std::string frame_id, port_name;
 
+const double two_pi = (2.0 * boost::math::constants::pi<double>());
+
 inline double to_radians(double degrees) {
-	return degrees * (boost::math::constants::pi<double>() / 180.0);
+	double radians = degrees * (boost::math::constants::pi<double>() / 180.0);
+	if (radians > two_pi) {
+		radians = radians - two_pi;
+	}
+	return radians;
 }
 
 class XV11Driver {
@@ -95,17 +101,17 @@ public:
 				// TODO: implement checksum checksumming?
 
 				index -= 0xA0;
-				index = (index + 45 - 2) % 90;
+				index = (index + 45) % 90;
 
 				msg.header.stamp = ros::Time::now();
 				msg.packet_index = index;
-				msg.angle_min = to_radians(index * 4);
-				msg.angle_max = to_radians(index * 4 + 3);
+				msg.angle_min = to_radians((index * 4) - 10) ;
+				msg.angle_max = to_radians((index * 4 + 3) - 10);
 				msg.angle_increment = to_radians(4);
 				msg.time_increment = 1e-6;
 				msg.range_min = 0.06;
 				msg.range_max = 5.0;
-
+				//ROS_INFO("Speed: %.2f", ( (double)speed / 64.0) );
 				return msg;
 			}
 
