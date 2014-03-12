@@ -170,7 +170,7 @@ public:
     if(isinf(predicted_range)) {
       return .1;
     } else {
-      return .1 + .9*exp(-pow(log(range/predicted_range), 2));
+      return .1 + .9*exp(-25*pow(log(range/predicted_range), 2));
     }
   }
 };
