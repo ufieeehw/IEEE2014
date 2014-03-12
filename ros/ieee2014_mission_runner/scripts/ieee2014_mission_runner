@@ -13,9 +13,13 @@ from tf import transformations
 
 from ieee2014_controller.srv import SetEnabled
 from ieee2014_maestro.srv import ClipPos, FireDart
+import sys
 
 import ieee2014_mission_runner
 from ieee2014_mission_runner import coarse_targeting, fine_targeting
+
+from ieee2014_vision.srv import *
+from ieee2014_vision.msg import *
 
 rospy.init_node('ieee2014_mission_runner')
 
@@ -40,6 +44,7 @@ class TopicReader(object):
 
 pose_topic = TopicReader('pose', PoseStamped)
 gun_camera_image_topic = TopicReader('gun_camera/image_raw', Image)
+block_topic = TopicRead('block_positions', BlockPositions)
 
 def wrap_blocking_func(f):
     def _(*args, **kwargs):
@@ -58,6 +63,14 @@ target_solver_set_enabled = wrap_blocking_func(rospy.ServiceProxy(
 controller_pub = rospy.Publisher('desired_pose', PoseStamped, queue_size=10)
 pan_pub = rospy.Publisher('pan_controller/command', Float64)
 tilt_pub = rospy.Publisher('tilt_controller/command', Float64)
+
+def unpack_blocks(block_msg):
+    block_positions = []
+    for block in block_msg.blocks:
+        block_positions.append((block.x,block.y))
+        
+    return block_positions
+
 
 @defer.inlineCallbacks
 def set_pan_tilt(pan, tilt):
@@ -133,13 +146,36 @@ def do_fine_targeting():
 def main():
     # XXX wait for start
     
+    
     # XXX look for blocks, fill in block_positions
+    set_pan_tilt(0.3,0.0)
+
+    
+    rospy.wait_for_service('Detect_Blocks')
+    block_detect_enable = rospy.ServiceProxy('Detect_Blocks', Detect_Blocks)
+
+    block_msg = block_topic.get_next_message()
+    blocks = unpack_blocks(block_msg)
+    attempts = 0
+    while(len(blocks) < 3):
+        attempts +=1
+        if attempts % 25 == 0:
+            set_pan_tilt(0.4,0.0)
+        print "Not enough blocks detected"
+        block_msg = block_topic.get_next_message()
+        blocks = unpack_blocks(block_msg)
+        
+    block_detect_enable(False)        
+        
     start_pos = (-1.09, -0.34)
-    block_positions = [
-        (-0.30, +0.19),
-        (-0.00, -0.18),
-        (+0.32, +0.20),
-    ]
+    
+    block_positions = blocks
+    
+    #block_positions = [
+    #    (-0.30, +0.19),
+    #    (-0.00, -0.18),
+    #    (+0.32, +0.20),
+    #]
     end_pos = (1.03, -0.40)
     
     yield go_to_point(start_pos + numpy.array([0.2, 0]))
