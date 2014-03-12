@@ -17,50 +17,28 @@ from ieee2014_maestro.srv import ClipPos, FireDart
 import sys
 
 import ieee2014_mission_runner
-from ieee2014_mission_runner import coarse_targeting, fine_targeting
+from ieee2014_mission_runner import coarse_targeting, fine_targeting, util
 
-from ieee2014_vision.srv import *
-from ieee2014_vision.msg import *
+from ieee2014_vision.srv import Detect_Blocks
+from ieee2014_vision.msg import BlockPositions
 
 rospy.init_node('ieee2014_mission_runner')
 
-xyzw_array = lambda o: numpy.array([o.x, o.y, o.z, o.w])
-xy_array = lambda o: numpy.array([o.x, o.y])
+pose_topic = util.TopicReader('pose', PoseStamped)
+gun_camera_image_topic = util.TopicReader('gun_camera/image_rect_color', Image)
+gun_camera_info_topic = util.TopicReader('gun_camera/camera_info', CameraInfo)
+block_topic = util.TopicReader('block_positions', BlockPositions)
 
-class TopicReader(object):
-    def __init__(self, topic_name, topic_type):
-        self._sub = rospy.Subscriber(topic_name, topic_type,
-            lambda msg: reactor.callFromThread(self._cb, msg))
-        self._dfs = []
-    
-    def _cb(self, msg):
-        for df in self._dfs:
-            reactor.callLater(0, df.callback, msg)
-        self._dfs = []
-    
-    def get_next_message(self):
-        df = defer.Deferred()
-        self._dfs.append(df)
-        return df
-
-pose_topic = TopicReader('pose', PoseStamped)
-gun_camera_image_topic = TopicReader('gun_camera/image_rect_color', Image)
-gun_camera_info_topic = TopicReader('gun_camera/camera_info', CameraInfo)
-block_topic = TopicRead('block_positions', BlockPositions)
-
-def wrap_blocking_func(f):
-    def _(*args, **kwargs):
-        return threads.deferToThread(f, *args, **kwargs)
-    return _
-
-controller_set_enabled = wrap_blocking_func(rospy.ServiceProxy(
+controller_set_enabled = util.wrap_blocking_func(rospy.ServiceProxy(
     'controller/set_enabled', SetEnabled, persistent=True))
-raw_change_clip_position = wrap_blocking_func(rospy.ServiceProxy(
+raw_change_clip_position = util.wrap_blocking_func(rospy.ServiceProxy(
     'change_clip_position', ClipPos, persistent=True))
-fire_dart = wrap_blocking_func(rospy.ServiceProxy(
+fire_dart = util.wrap_blocking_func(rospy.ServiceProxy(
     'fire_dart', FireDart, persistent=True))
-target_solver_set_enabled = wrap_blocking_func(rospy.ServiceProxy(
+target_solver_set_enabled = util.wrap_blocking_func(rospy.ServiceProxy(
     'target_solver/set_enabled', SetEnabled, persistent=True))
+detect_blocks = util.wrap_blocking_func(rospy.ServiceProxy(
+    'Detect_Blocks', Detect_Blocks, persistent=True))
 
 @defer.inlineCallbacks
 def change_clip_position(pos):
@@ -68,8 +46,8 @@ def change_clip_position(pos):
     yield sleep(1)
 
 controller_pub = rospy.Publisher('desired_pose', PoseStamped, queue_size=10)
-pan_pub = rospy.Publisher('pan_controller/command', Float64)
-tilt_pub = rospy.Publisher('tilt_controller/command', Float64)
+pan_pub = rospy.Publisher('pan_controller/command', Float64, queue_size=10)
+tilt_pub = rospy.Publisher('tilt_controller/command', Float64, queue_size=10)
 
 def unpack_blocks(block_msg):
     block_positions = []
@@ -132,11 +110,6 @@ def turn_and_go(point):
     yield go_to_point(point, angle)
     yield go_to_point(point, 0)
 
-def sleep(t):
-    d = defer.Deferred(canceller=lambda d_: dc.cancel())
-    dc = reactor.callLater(t, d.callback, None)
-    return d
-
 import cv2
 from cv_bridge import CvBridge
 bridge = CvBridge()
@@ -174,26 +147,19 @@ def main():
     # XXX wait for start
     
     
-    # XXX look for blocks, fill in block_positions
-    set_pan_tilt(0.3,0.0)
-
+    # look for blocks, fill in block_positions
+    yield set_pan_tilt(0.3, 0.0)
     
-    rospy.wait_for_service('Detect_Blocks')
-    block_detect_enable = rospy.ServiceProxy('Detect_Blocks', Detect_Blocks)
-
-    block_msg = block_topic.get_next_message()
-    blocks = unpack_blocks(block_msg)
-    attempts = 0
-    while(len(blocks) < 3):
-        attempts +=1
-        if attempts % 25 == 0:
-            set_pan_tilt(0.4,0.0)
+    for attempt in itertools.count():
+        blocks = unpack_blocks((yield block_topic.get_next_message()))
+        if len(blocks) >= 3:
+            break
         print "Not enough blocks detected"
-        block_msg = block_topic.get_next_message()
-        blocks = unpack_blocks(block_msg)
-        
-    block_detect_enable(False)        
-        
+        if attempt % 25 == 0:
+            set_pan_tilt(0.4, 0.0)
+    
+    detect_blocks(False)
+    
     start_pos = (-1.09, -0.34)
     
     block_positions = blocks
@@ -225,6 +191,7 @@ def main():
         yield fire_dart(True) # internally waits 1 second
     yield go_to_point(end_pos)
     yield change_clip_position(4)
+
 
 def run():
     def stopper(x):
