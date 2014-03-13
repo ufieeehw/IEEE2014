@@ -52,7 +52,7 @@ class Template(object):
         #    for pixel in row
         #    if is_opaque(pixel)]
         mean = numpy.sum(numpy.choose(opaque3, [0, template_img_with_alpha[:, :, :3]]), axis=(0, 1))/numpy.sum(opaque)
-        print mean
+        #print mean
         
         res = numpy.choose(opaque3, [0, template_img_with_alpha[:, :, :3] - mean])
         
@@ -68,22 +68,19 @@ class Template(object):
         assert img.shape == self._template.shape
         matchness = product(numpy.maximum(0, cross_correlate(img[:,:,c], self._template[:,:,c])) for c in xrange(img.shape[2]))
         
-        print matchness.dtype
         cv2.imshow('normalize(matchness)', normalize(matchness))
-        print matchness.shape
         
         important = matchness[matchness.shape[0]//4:matchness.shape[0]*3//4, matchness.shape[1]//4:matchness.shape[1]*3//4]
         
         important_pos = numpy.unravel_index(numpy.argmax(important), important.shape)
         pos = important_pos[0] + matchness.shape[0]//4, important_pos[1] + matchness.shape[1]//4
         
-        moved_template = numpy.roll(numpy.roll(self._orig, pos[0]-self._orig.shape[0]//2, 0), pos[1]-self._orig.shape[1]//2, 1)
-        cv2.imshow('moved_template', moved_template)
-        
         if True:
+            moved_template = numpy.roll(numpy.roll(self._orig, pos[0]-self._orig.shape[0]//2, 0), pos[1]-self._orig.shape[1]//2, 1)
+            cv2.imshow('moved_template', moved_template)
             debug_img = img.copy()
             debug_img[pos[0]-3:pos[0]+3, pos[1]-3:pos[1]+3] = 0, 0, 0
-            debug_img += moved_template[:,:,:3]
+            debug_img = debug_img//2 + moved_template[:,:,:3]//2
             cv2.imshow('debug_img', debug_img)
             cv2.waitKey()
         
@@ -98,7 +95,7 @@ class Template(object):
         cv2.imshow("xy_normalized", normalize(xy))
         cv2.imshow("img_padded", img_padded)'''
         
-        return pos[1], pos[0]
+        return pos[1] - matchness.shape[1]//2, pos[0] - matchness.shape[0]//2
 
 INCH = 0.0254
 
