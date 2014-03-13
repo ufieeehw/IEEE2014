@@ -203,7 +203,7 @@ def main():
 	]
 	
 	desired_pose_pub = rospy.Publisher('desired_pose', PoseStamped)
-	
+    enable_mouse = rospy.get_param('~/state_visualizer/mouse', "N")
 	blockobj = blockHandler()
 	display = pygame.display.set_mode((640,480))
 	
@@ -246,7 +246,7 @@ def main():
 				current_position = robot.position
 				current_angle = robot.angle
 				
-				if event.button == 1:
+				if event.button == 1 and enable_mouse == "Y":
 					robot_waypoint.set_pos(reverse_point(event.pos))
 					desired_pose_pub.publish(PoseStamped(
 						header=Header(
@@ -259,7 +259,7 @@ def main():
 					  ),
 					))
 					rospy.loginfo(robot_waypoint.pos)
-				elif event.button == 2 or 3:
+				elif event.button == 3 and enable_mouse == "Y":
 					apos = reverse_point(event.pos)
 					yd = apos[1]-robot.position[1]
 					xd = apos[0]-robot.position[0]
