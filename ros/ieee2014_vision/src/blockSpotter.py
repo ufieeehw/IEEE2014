@@ -51,7 +51,7 @@ def nothing(x):
 def spotBlocks(img=None, debug=False):
 	#Dear everyone:
 	#Everything is in inches because I couldn't find a metric ruler.
-	if img == None:
+	if img is None:
 		path =  os.path.dirname(os.path.abspath(__file__))
 		#img = cv2.imread(path + '/Debug/IEEEcourseMarch2-2.png')
 		img = cv2.imread(path + '/Debug/frame0000.jpg')
