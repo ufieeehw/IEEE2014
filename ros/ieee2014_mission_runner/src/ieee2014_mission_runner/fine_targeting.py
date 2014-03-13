@@ -74,7 +74,7 @@ class Template(object):
         important_pos = numpy.unravel_index(numpy.argmax(important), important.shape)
         pos = important_pos[0] + matchness.shape[0]//4, important_pos[1] + matchness.shape[1]//4
         
-        if True:
+        if False:
             cv2.imshow('normalize(matchness)', normalize(matchness))
             moved_template = numpy.roll(numpy.roll(self._orig, pos[0]-self._orig.shape[0]//2, 0), pos[1]-self._orig.shape[1]//2, 1)
             #cv2.imshow('moved_template', moved_template)

@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import math
+import itertools
 
 import numpy
 from twisted.internet import reactor, defer, threads
@@ -50,6 +51,7 @@ pan_pub = rospy.Publisher('pan_controller/command', Float64, queue_size=10)
 tilt_pub = rospy.Publisher('tilt_controller/command', Float64, queue_size=10)
 
 def unpack_blocks(block_msg):
+    print block_msg
     block_positions = []
     for block in block_msg.blocks:
         block_positions.append((block.x,block.y))
@@ -59,13 +61,15 @@ def unpack_blocks(block_msg):
 
 @defer.inlineCallbacks
 def set_pan_tilt(pan, tilt):
-    pan_pub.publish(Float64(
-        data=pan % (2 * math.pi),
-    ))
-    tilt_pub.publish(Float64(
-        data=tilt % (2 * math.pi),
-    ))
-    yield util.sleep(1) # it can take longer than this
+    for i in xrange(10):
+        pan_pub.publish(Float64(
+            data=pan % (2 * math.pi),
+        ))
+        tilt_pub.publish(Float64(
+            data=tilt % (2 * math.pi),
+        ))
+        yield util.sleep(.1)
+    # it can take longer than 1 second..
 
 @defer.inlineCallbacks
 def go_to_point(point, angle=0):
@@ -136,36 +140,40 @@ def do_fine_targeting(approx_pos, current_angles):
 
 @defer.inlineCallbacks
 def main():
+    start_pos = (-1.09, -0.34)
+    end_pos = (1.06, -0.40)
+    
     # XXX wait for start
     
+    pan_tilt_task = set_pan_tilt(0.3, 0.0)
+    yield go_to_point(start_pos + numpy.array([0.2, 0]))
+    yield go_to_point(start_pos)
+    yield pan_tilt_task
+    
+    yield util.sleep(1)
     
     # look for blocks, fill in block_positions
-    yield set_pan_tilt(0.3, 0.0)
     
-    '''detect_blocks(True)
+    if True:
+        detect_blocks(True)
+        
+        for attempt in itertools.count():
+            block_positions = unpack_blocks((yield block_topic.get_next_message()))
+            if len(block_positions) >= 3:
+                break
+            print "Not enough blocks detected"
+            if attempt % 25 == 0:
+                yield set_pan_tilt(0.4, 0.0)
+        
+        detect_blocks(False)
+    else:
+        block_positions = [
+            (-0.30, +0.19),
+            (-0.00, -0.18),
+            (+0.32, +0.20),
+        ]
     
-    for attempt in itertools.count():
-        blocks = unpack_blocks((yield block_topic.get_next_message()))
-        if len(blocks) >= 3:
-            break
-        print "Not enough blocks detected"
-        if attempt % 25 == 0:
-            set_pan_tilt(0.4, 0.0)
-    
-    detect_blocks(False)
-    
-    block_positions = blocks'''
-    
-    start_pos = (-1.09, -0.34)
-    
-    block_positions = [
-        (-0.30, +0.19),
-        (-0.00, -0.18),
-        (+0.32, +0.20),
-    ]
-    end_pos = (1.03, -0.40)
-    
-    yield go_to_point(start_pos + numpy.array([0.2, 0]))
+    block_positions = sorted(block_positions, key=lambda (x, y): x)
     
     for i, block_position in enumerate(block_positions):
         coarse_angles = coarse_targeting.think(block_position)
