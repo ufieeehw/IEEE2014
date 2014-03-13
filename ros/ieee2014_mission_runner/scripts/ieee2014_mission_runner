@@ -156,15 +156,15 @@ def main():
     
     if True:
         detect_blocks(True)
-        
+        pan = 0.3
         for attempt in itertools.count():
             block_positions = unpack_blocks((yield block_topic.get_next_message()))
-            if len(block_positions) >= 3:
+            if len(block_positions) >= 3 and attempt >= 10:
                 break
             print "Not enough blocks detected"
-            if attempt % 25 == 0:
-                yield set_pan_tilt(0.4, 0.0)
-        
+            if attempt % 25 == 24:
+                pan += 0.1
+                yield set_pan_tilt(pan, 0.0)
         detect_blocks(False)
     else:
         block_positions = [
