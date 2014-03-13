@@ -3,6 +3,8 @@ from __future__ import division
 import math
 import operator
 import sys
+import time
+import os
 
 import numpy
 import cv2
@@ -12,11 +14,17 @@ from tf import transformations
 
 from ieee2014_mission_runner import render
 
+start_time = int(time.time())
+try:
+    os.mkdir('/tmp/%i' % (start_time,))
+except:
+    pass
+
 def product(x):
     return reduce(operator.mul, x)
 
 def normalize(x):
-    return (x - numpy.min(x))/(numpy.max(x) - numpy.min(x))
+    return (255/(numpy.max(x) - numpy.min(x))*(x - numpy.min(x)) + 0.5).astype(numpy.uint8)
 
 def is_opaque(pixel):
     return pixel[3] >= 128
@@ -74,15 +82,17 @@ class Template(object):
         important_pos = numpy.unravel_index(numpy.argmax(important), important.shape)
         pos = important_pos[0] + matchness.shape[0]//4, important_pos[1] + matchness.shape[1]//4
         
-        if False:
-            cv2.imshow('normalize(matchness)', normalize(matchness))
+        if True:
+            t = int(time.time())
+            cv2.imwrite('/tmp/%i/%i-matchness.png' % (start_time, t), normalize(matchness))
             moved_template = numpy.roll(numpy.roll(self._orig, pos[0]-self._orig.shape[0]//2, 0), pos[1]-self._orig.shape[1]//2, 1)
             #cv2.imshow('moved_template', moved_template)
             debug_img = img.copy()
             debug_img[pos[0]-3:pos[0]+3, pos[1]-3:pos[1]+3] = 0, 0, 0
             debug_img = debug_img//2 + moved_template[:,:,:3]//2
-            cv2.imshow('debug_img', debug_img)
-            cv2.waitKey()
+            cv2.imwrite('/tmp/%i/%i-src.png' % (start_time, t), img)
+            cv2.imwrite('/tmp/%i/%i-debug.png' % (start_time, t), debug_img)
+            #cv2.waitKey()
         
         '''for y, row in enumerate(template_src):
             for x, pixel in enumerate(row):

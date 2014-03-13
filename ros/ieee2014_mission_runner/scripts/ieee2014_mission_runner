@@ -180,6 +180,7 @@ def main():
         coarse_target_task = set_pan_tilt(**coarse_angles)
         yield turn_and_go(block_position)
         
+        clip_task = change_clip_position(i+1)
         sleep_task = util.sleep(3)
         
         yield coarse_target_task # should already be done
@@ -188,8 +189,7 @@ def main():
         
         yield sleep_task # wait remainder of 3 seconds
         
-        yield change_clip_position(i+1)
-        
+        yield clip_task
         yield fire_dart(True) # internally waits 1 second
     yield go_to_point(end_pos)
     yield change_clip_position(4)
