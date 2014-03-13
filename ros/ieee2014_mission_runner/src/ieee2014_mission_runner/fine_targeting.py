@@ -109,7 +109,15 @@ class Template(object):
 
 INCH = 0.0254
 
+target_center = numpy.array([
+    -97*INCH / 2 + 1/4*INCH / 2,
+    0,
+    24*INCH + 5*INCH / 2,
+])
+
 def draw_target(r):
+    r = r.prepend_transform(transformations.translation_matrix(target_center))
+    
     square_side_length = 8*INCH
     r.draw_polygon([
         (0, +square_side_length/2, +square_side_length/2),
@@ -149,11 +157,6 @@ def draw_target(r):
     ], (0, 0, 0, 255))
 
 camera_height = 0.15334 + 0.08067
-target_center = numpy.array([
-    -97*INCH / 2 + 1/4*INCH / 2,
-    0,
-    24*INCH + 5*INCH / 2,
-])
 
 def get(img, pos, P, debug_images=False):
     pos = numpy.array([pos[0], pos[1], camera_height])
@@ -163,7 +166,7 @@ def get(img, pos, P, debug_images=False):
     r = r.prepend_transform(render.look_at_mat(target_center + [0, 0, -0.05] - pos)) # aim low to account for offset
     r = r.prepend_transform(transformations.translation_matrix(-pos))
     
-    draw_target(r.prepend_transform(transformations.translation_matrix(target_center)))
+    draw_target(r)
     
     template = Template(dest)
     

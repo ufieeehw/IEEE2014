@@ -1,0 +1,104 @@
+#!/usr/bin/env python
+
+from __future__ import division
+
+import math
+import time
+
+import numpy
+import pygame
+
+import rospy
+from xv11_driver.msg import LaserMeasurements
+from std_msgs.msg import Header, Float64
+from geometry_msgs.msg import TwistStamped, PoseStamped, Pose, Point, Quaternion
+from dynamixel_msgs.msg import JointState
+from sensor_msgs.msg import Image, CameraInfo, RegionOfInterest
+from tf import transformations
+import cv_bridge
+
+from ieee2014_simulator.vector import v, V
+from ieee2014_simulator import scene
+from ieee2014_mission_runner import render, fine_targeting
+
+xy_array = lambda o: numpy.array([o.x, o.y])
+xyzw_array = lambda o: numpy.array([o.x, o.y, o.z, o.w])
+
+class Renderer(object):
+    def __init__(self):
+        self._image_pub = rospy.Publisher('gun_camera/image_rect_color', Image, queue_size=10)
+        self._info_pub = rospy.Publisher('gun_camera/camera_info', CameraInfo, queue_size=10)
+    
+    def publish(self, robot_pos, pan_angle, tilt_angle):
+        t = rospy.Time.now()
+        
+        camera_info = CameraInfo(
+            header=Header(
+                stamp=t,
+                frame_id='/camera_frame',
+            ),
+            height=360,
+            width=640,
+            distortion_model='plumb_bob',
+            D=[0.0960154506977053, -0.170293168815155, -0.00154598823818752, 0.00277712775261882, 0.0],
+            K=[459.725799866446, 0.0, 313.173968583298, 0.0, 460.940484118348, 185.30476024954, 0.0, 0.0, 1.0],
+            R=[1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0],
+            P=[462.292755126953, 0.0, 314.173743238696, 0.0, 0.0, 466.827423095703, 184.381978537142, 0.0, 0.0, 0.0, 1.0, 0.0],
+            binning_x=0,
+            binning_y=0,
+            roi=RegionOfInterest(
+                x_offset=0,
+                y_offset=0,
+                height=0,
+                width=0,
+                do_rectify=False,
+            ),
+        )
+        self._info_pub.publish(camera_info)
+        
+        pos = numpy.array([robot_pos[0], robot_pos[1], fine_targeting.camera_height])
+        forward = numpy.array([
+            math.cos(tilt_angle) * math.cos(pan_angle),
+            math.cos(tilt_angle) * math.sin(pan_angle),
+            math.sin(tilt_angle),
+        ])
+        
+        dest = render.make_dest(width=camera_info.width, height=camera_info.height)
+        dest[:, :] = (128, 128, 128, 255)
+        r = render.Renderer(dest, numpy.reshape(camera_info.P, (3, 4)))
+        r = r.prepend_transform(render.look_at_mat(forward))
+        r = r.prepend_transform(transformations.translation_matrix(-pos))
+        
+        scene.draw_scene(r)
+        
+        self._image_pub.publish(cv_bridge.CvBridge().cv2_to_imgmsg(dest[:, :, :3], "bgr8"))
+
+rospy.init_node('renderer')
+
+renderer = Renderer()
+
+robot_pos = None
+robot_angle = None
+def robot_pos_cb(msg):
+    global robot_pos, robot_angle
+    robot_pos = xy_array(msg.pose.position)
+    robot_angle = transformations.euler_from_quaternion(xyzw_array(msg.pose.orientation))[2]
+rospy.Subscriber('sim_pose', PoseStamped, robot_pos_cb)
+
+pan_angle = None
+def pan_angle_cb(msg):
+    global pan_angle
+    pan_angle = msg.current_pos
+rospy.Subscriber('pan_controller/state', JointState, pan_angle_cb)
+
+tilt_angle = None
+def tilt_angle_cb(msg):
+    global tilt_angle
+    tilt_angle = msg.current_pos
+rospy.Subscriber('tilt_controller/state', JointState, tilt_angle_cb)
+
+rate = rospy.Rate(5)
+while not rospy.is_shutdown():
+    if all(x is not None for x in [robot_pos, robot_angle, pan_angle, tilt_angle]):
+        renderer.publish(robot_pos, robot_angle + pan_angle, tilt_angle)
+    rate.sleep()

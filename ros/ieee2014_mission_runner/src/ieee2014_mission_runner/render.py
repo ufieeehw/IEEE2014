@@ -8,6 +8,11 @@ from tf import transformations
 def make_dest(width, height):
     return numpy.zeros((height, width, 4), dtype=numpy.uint8)
 
+def clip_polygon(corners, plane):
+    last_point = None
+    for a, b in zip(corners, corners[1:] + [corners[0]]):
+        pass
+
 class Renderer(object):
     def __init__(self, dest, proj_mat=numpy.identity(3)):
         assert proj_mat.shape[0] == 3
@@ -23,7 +28,11 @@ class Renderer(object):
     
     def draw_polygon_homo(self, corners, color):
         def wdivide((x, y, w)):
+            if w <= 0: w = 1e-6
             return int(round(x/w)), int(round(y/w))
+        for corner in corners:
+            if self._proj_mat.dot(corner)[2] <= 0:
+                return
         cv2.fillPoly(
             self._dest,
             numpy.array([[wdivide(self._proj_mat.dot(corner))

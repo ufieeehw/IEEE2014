@@ -17,17 +17,12 @@
   <include file="$(find xmega_connector)/launch/xmega_connector.launch"/>
 
   <include file="$(find xv11_driver)/launch/xv11_driver.launch"/>
-
-  <include file="$(find ieee2014_localization)/launch/particle_filter.launch"/>
-
+  
   <include file="$(find dynamixel_shooter)/launch/controller_manager.launch"/>
   <include file="$(find dynamixel_shooter)/launch/start_pan_tilt_controller.launch"/>
-  <node name="blockPublisher" pkg="ieee2014_vision" type="blockPublisher" respawn="true"/>
-  <node name="controller" pkg="ieee2014_controller" type="controller" respawn="true"/>
 
   <node name="maestro_driver" pkg="ieee2014_maestro" type="maestro_controller.py" respawn="true"/>
 
-  <include file="$(find ieee2014_tf_broadcaster)/launch/tf_broadcaster.launch"/>
-  <node name="target_solver" pkg="ieee2014_tf_target_solver" type="ieee2014_tf_target_solver.py" respawn="true"/>
+  <include file="$(find ieee2014_launch)/launch/sim.launch"/>
 
 </launch>

@@ -11,8 +11,10 @@ import rospy
 from xv11_driver.msg import LaserMeasurements
 from std_msgs.msg import Header, Float64
 from geometry_msgs.msg import TwistStamped, PoseStamped, Pose, Point, Quaternion
-from dynamixel_msgs.msg import JointState
 from tf import transformations
+
+from dynamixel_msgs.msg import JointState
+from ieee2014_maestro.srv import ClipPos, ClipPosResponse, FireDart, FireDartResponse
 
 from ieee2014_simulator.vector import v, V
 
@@ -70,7 +72,7 @@ class Robot(object):
         self.time_left = 0
         
         self.laser_angle = 0
-        self.lidar_pub = rospy.Publisher('lidar', LaserMeasurements)
+        self.lidar_pub = rospy.Publisher('laser_measurements', LaserMeasurements)
         
         def twist_cb(msg):
             self._set_velocity((msg.twist.linear.x, msg.twist.linear.y), msg.twist.angular.z)
@@ -181,10 +183,10 @@ class Dynamixel(object):
     def __init__(self):
         self.pan_angle = 0.0
         self.tilt_angle = 0.0
-        self.pan_pub = rospy.Publisher('/sim_pan_controller/state', JointState)
-        self.tilt_pub = rospy.Publisher('/sim_tilt_controller/state', JointState)
-        rospy.Subscriber('/sim_pan_controller/command', Float64, self.set_pan_angle)
-        rospy.Subscriber('/sim_tilt_controller/command', Float64, self.set_tilt_angle)
+        self.pan_pub = rospy.Publisher('pan_controller/state', JointState)
+        self.tilt_pub = rospy.Publisher('tilt_controller/state', JointState)
+        rospy.Subscriber('pan_controller/command', Float64, self.set_pan_angle)
+        rospy.Subscriber('tilt_controller/command', Float64, self.set_tilt_angle)
 
         # pan_msg = JointState()
         # pan_msg.current_pos = self.pan_angle
@@ -222,6 +224,17 @@ def main():
     robot = Robot((-course_length/2 + (6*0.0254), -course_width/2 + ((5+5.25+(3/4))*0.0254)), 0.0)
 
     dynamixels = Dynamixel()
+    
+    def clip_pos_cb(msg):
+        print 'clip changed to position', msg.pos
+        return ClipPosResponse()
+    rospy.Service('change_clip_position', ClipPos, clip_pos_cb)
+    
+    def fire_cb(msg):
+        print 'dart fired:', msg.fire
+        return FireDartResponse()
+    rospy.Service('fire_dart', FireDart, fire_cb)
+    
     course = [
         Line((-course_length/2, +course_width/2), (+course_length/2, +course_width/2)),
         Line((+course_length/2, +course_width/2), (+course_length/2, -course_width/2)),
