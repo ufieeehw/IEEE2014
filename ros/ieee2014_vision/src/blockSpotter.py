@@ -126,9 +126,15 @@ def spotBlocks(img=None, debug=False):
 			#cv2.putText(dispimg, str(cx)+ ', ' +str(cy), (cx*4 + 10, cy*4 + 10), cv2.FONT_HERSHEY_PLAIN, 0.8, (180,20,180), thickness=1)
 			#cv2.putText(dispimg, str(imxy[0])+ ', ' +str(imxy[1]), (cx*4, cy*4), cv2.FONT_HERSHEY_PLAIN, 0.8, (0,0,255), thickness=1)
 			#cv2.putText(dispimg, str(distanceHoriz)+ ', ' +str(relativeX), (cx*4, cy*4), cv2.FONT_HERSHEY_PLAIN, 0.8, (0,0,255), thickness=1)
-			positions.append((distanceHoriz*0.0254,relativeX*0.0254))
-			
-			goodComs.append(com)
+			relative_position = (distanceHoriz*0.0254,relativeX*0.0254)
+			accept = True
+			for other_pos in positions:
+			    if (np.sum(np.abs(np.divide(np.subtract(other_pos,relative_position),relative_position))) < 0.1):
+			        accept = False
+			        break
+			if accept == True:    
+			    positions.append(relative_position)
+			    goodComs.append(com)
 
 
 			#meters

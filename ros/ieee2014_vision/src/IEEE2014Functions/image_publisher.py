@@ -46,7 +46,7 @@ class image_reciever(object):
 def main():
 	
 	rospy.init_node('camera')
-	imsend = image_sender()
+	imsend = image_sender('/gun_camera/image_rect_color')
 	cam = cv2.VideoCapture(0)	
 
 	targetResolution = (640,360)

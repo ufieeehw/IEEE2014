@@ -22,7 +22,7 @@
 
   <include file="$(find dynamixel_shooter)/launch/controller_manager.launch"/>
   <include file="$(find dynamixel_shooter)/launch/start_pan_tilt_controller.launch"/>
-
+  <node name="blockPublisher" pkg="ieee2014_vision" type="blockPublisher" respawn="true"/>
   <node name="controller" pkg="ieee2014_controller" type="controller" respawn="true"/>
 
   <node name="maestro_driver" pkg="ieee2014_maestro" type="maestro_controller.py" respawn="true"/>
