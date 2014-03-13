@@ -43,7 +43,7 @@ detect_blocks = util.wrap_blocking_func(rospy.ServiceProxy(
 @defer.inlineCallbacks
 def change_clip_position(pos):
     yield raw_change_clip_position(pos)
-    yield sleep(1)
+    yield util.sleep(1)
 
 controller_pub = rospy.Publisher('desired_pose', PoseStamped, queue_size=10)
 pan_pub = rospy.Publisher('pan_controller/command', Float64, queue_size=10)
@@ -65,7 +65,7 @@ def set_pan_tilt(pan, tilt):
     tilt_pub.publish(Float64(
         data=tilt % (2 * math.pi),
     ))
-    yield sleep(1) # it can take longer than this
+    yield util.sleep(1) # it can take longer than this
 
 @defer.inlineCallbacks
 def go_to_point(point, angle=0):
@@ -114,33 +114,25 @@ import cv2
 from cv_bridge import CvBridge
 bridge = CvBridge()
 @defer.inlineCallbacks
-def do_fine_targeting(current_angles):
+def do_fine_targeting(approx_pos, current_angles):
     camera_info = yield gun_camera_info_topic.get_next_message()
-    camera_model = image_geometry.PinholeCameraModel(); camera_model.fromCameraInfo(camera_info)
+    P = numpy.resize(camera_info.P, (3, 4))
+    #camera_model = image_geometry.PinholeCameraModel(); camera_model.fromCameraInfo(camera_info)
     
     img_msg = yield gun_camera_image_topic.get_next_message()
     img = numpy.array(bridge.imgmsg_to_cv(img_msg, "bgr8"))
-    res = fine_targeting.get(img)
+    res = fine_targeting.get(img, approx_pos, P)
+    print res
     
-    x = camera_model.projectPixelTo3dRay(res)
+    delta_pan = -math.asin(res[0]/P[0, 0])
+    delta_tilt = -math.asin(res[1]/P[1, 1]) # - 0.03
     
-    
-    #yield sleep(5)
-    print x
-    
-    delta_pan = -math.asin(x[0])
-    delta_tilt = -math.asin(x[1]) - 0.03
+    print delta_pan, delta_tilt
     
     yield set_pan_tilt(
         pan=current_angles['pan'] + delta_pan,
         tilt=current_angles['tilt'] + delta_tilt,
     )
-    #yield sleep(5)
-    
-    img_msg = yield gun_camera_image_topic.get_next_message()
-    img = numpy.array(bridge.imgmsg_to_cv(img_msg, "bgr8"))
-    cv2.imshow("post-fine targeting", img)
-    #yield threads.deferToThread(cv2.waitKey)
 
 @defer.inlineCallbacks
 def main():
@@ -178,10 +170,10 @@ def main():
         coarse_target_task = set_pan_tilt(**coarse_angles)
         yield turn_and_go(block_position)
         
-        sleep_task = sleep(3)
+        sleep_task = util.sleep(3)
         
         yield coarse_target_task # should already be done
-        yield sleep(2) # wait to stop moving
+        yield util.sleep(2) # wait to stop moving
         yield do_fine_targeting(coarse_angles)
         
         yield sleep_task # wait remainder of 3 seconds
@@ -192,6 +184,21 @@ def main():
     yield go_to_point(end_pos)
     yield change_clip_position(4)
 
+@defer.inlineCallbacks
+def main():
+    pos = (0, 0)
+    
+    yield util.sleep(1) # wait for things to connect...
+    
+    #yield set_pan_tilt(0.3, 0.0)
+    #yield util.sleep(4)
+    
+    coarse_angles = coarse_targeting.think(pos)
+    yield set_pan_tilt(**coarse_angles)
+    
+    yield util.sleep(2)
+    
+    yield do_fine_targeting(pos, coarse_angles)
 
 def run():
     def stopper(x):
