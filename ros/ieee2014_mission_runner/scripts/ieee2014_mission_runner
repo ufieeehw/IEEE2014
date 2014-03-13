@@ -181,15 +181,17 @@ def main():
         yield turn_and_go(block_position)
         
         clip_task = change_clip_position(i+1)
+        start = reactor.seconds()
         sleep_task = util.sleep(3)
         
         yield coarse_target_task # should already be done
-        yield util.sleep(2) # wait to stop moving
+        yield util.sleep(1) # wait to stop moving
         yield do_fine_targeting(block_position, coarse_angles)
         
         yield sleep_task # wait remainder of 3 seconds
         
         yield clip_task
+        print 'waited', reactor.seconds() - start, 'seconds on block', i
         yield fire_dart(True) # internally waits 1 second
     yield go_to_point(end_pos)
     yield change_clip_position(4)
