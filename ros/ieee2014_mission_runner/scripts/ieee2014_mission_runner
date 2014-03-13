@@ -185,7 +185,7 @@ def main():
     yield change_clip_position(4)
 
 @defer.inlineCallbacks
-def main():
+def main2():
     pos = (0, 0)
     
     yield util.sleep(1) # wait for things to connect...
