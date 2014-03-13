@@ -90,8 +90,8 @@ def go_to_point(point, angle=0):
     while True:
         send_point() # just to make sure...
         msg = yield pose_topic.get_next_message()
-        distance = numpy.linalg.norm(xy_array(msg.pose.position) - point)
-        angle_error = angle - transformations.euler_from_quaternion(xyzw_array(msg.pose.orientation))[2]
+        distance = numpy.linalg.norm(util.xy_array(msg.pose.position) - point)
+        angle_error = angle - transformations.euler_from_quaternion(util.xyzw_array(msg.pose.orientation))[2]
         while angle_error > +math.pi: angle_error -= 2*math.pi
         while angle_error < -math.pi: angle_error += 2*math.pi
         if distance > 0.05 or abs(angle_error) > 0.1:
@@ -105,8 +105,8 @@ def go_to_point(point, angle=0):
 @defer.inlineCallbacks
 def turn_and_go(point):
     pose = yield pose_topic.get_next_message()
-    angle = math.atan2(*(point - xy_array(pose.pose.position))[::-1])
-    yield go_to_point(xy_array(pose.pose.position), angle)
+    angle = math.atan2(*(point - util.xy_array(pose.pose.position))[::-1])
+    yield go_to_point(util.xy_array(pose.pose.position), angle)
     yield go_to_point(point, angle)
     yield go_to_point(point, 0)
 
@@ -142,6 +142,8 @@ def main():
     # look for blocks, fill in block_positions
     yield set_pan_tilt(0.3, 0.0)
     
+    '''detect_blocks(True)
+    
     for attempt in itertools.count():
         blocks = unpack_blocks((yield block_topic.get_next_message()))
         if len(blocks) >= 3:
@@ -152,15 +154,15 @@ def main():
     
     detect_blocks(False)
     
+    block_positions = blocks'''
+    
     start_pos = (-1.09, -0.34)
     
-    block_positions = blocks
-    
-    #block_positions = [
-    #    (-0.30, +0.19),
-    #    (-0.00, -0.18),
-    #    (+0.32, +0.20),
-    #]
+    block_positions = [
+        (-0.30, +0.19),
+        (-0.00, -0.18),
+        (+0.32, +0.20),
+    ]
     end_pos = (1.03, -0.40)
     
     yield go_to_point(start_pos + numpy.array([0.2, 0]))
@@ -174,7 +176,7 @@ def main():
         
         yield coarse_target_task # should already be done
         yield util.sleep(2) # wait to stop moving
-        yield do_fine_targeting(coarse_angles)
+        yield do_fine_targeting(block_position, coarse_angles)
         
         yield sleep_task # wait remainder of 3 seconds
         

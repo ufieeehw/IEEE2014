@@ -68,7 +68,6 @@ class Template(object):
         assert img.shape == self._template.shape
         matchness = product(numpy.maximum(0, cross_correlate(img[:,:,c], self._template[:,:,c])) for c in xrange(img.shape[2]))
         
-        #cv2.imshow('normalize(matchness)', normalize(matchness))
         
         important = matchness[matchness.shape[0]//4:matchness.shape[0]*3//4, matchness.shape[1]//4:matchness.shape[1]*3//4]
         
@@ -76,6 +75,7 @@ class Template(object):
         pos = important_pos[0] + matchness.shape[0]//4, important_pos[1] + matchness.shape[1]//4
         
         if True:
+            cv2.imshow('normalize(matchness)', normalize(matchness))
             moved_template = numpy.roll(numpy.roll(self._orig, pos[0]-self._orig.shape[0]//2, 0), pos[1]-self._orig.shape[1]//2, 1)
             #cv2.imshow('moved_template', moved_template)
             debug_img = img.copy()
@@ -139,7 +139,6 @@ def draw_target(r):
     ], (0, 0, 0, 255))
 
 camera_height = 0.15334 + 0.08067
-camera_height = 0.4 # XXX testing on box
 target_center = numpy.array([
     -97*INCH / 2 + 1/4*INCH / 2,
     0,
@@ -151,7 +150,7 @@ def get(img, pos, P, debug_images=False):
     
     dest = render.make_dest(width=img.shape[1], height=img.shape[0])
     r = render.Renderer(dest, P)
-    r = r.prepend_transform(render.look_at_mat(target_center + [0, 0, -0.03] - pos)) # aim low to account for offset
+    r = r.prepend_transform(render.look_at_mat(target_center + [0, 0, -0.05] - pos)) # aim low to account for offset
     r = r.prepend_transform(transformations.translation_matrix(-pos))
     
     draw_target(r.prepend_transform(transformations.translation_matrix(target_center)))
