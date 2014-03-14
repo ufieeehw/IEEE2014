@@ -207,7 +207,7 @@ def main():
         pan = 0.3
         for attempt in itertools.count():
             block_positions = unpack_blocks((yield block_topic.get_next_message()))
-            if len(block_positions) >= 3 and attempt >= 10:
+            if len(block_positions) == 3 and attempt >= 10:
                 break
             print "Not enough blocks detected"
             if attempt % 25 == 24:
