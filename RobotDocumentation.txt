@@ -8,6 +8,14 @@ Check Off Items:
 		Orientation: Make sure the gun starts facing the front of the robot
 		USB2Dynamixel: Make sure the switch (on the opposite side of the RS-485/TTL connectors) is set to RS-485 for the RX-24Fs
 
+Color Sensor Connections
+	yellow - port D0
+	orange - port D1
+	green - port D2
+	
+	red - 3.3v
+	brown - ground
+
 Wheel Documentation
 	Wire Colors:
 		Black: Motor VCC
