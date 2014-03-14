@@ -202,7 +202,7 @@ def main():
     
     # look for blocks, fill in block_positions
     
-    if False:
+    if True:
         detect_blocks(True)
         pan = 0.3
         for attempt in itertools.count():
