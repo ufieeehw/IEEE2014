@@ -1,6 +1,7 @@
 from __future__ import division
 
 import math
+import random
 
 import numpy
 from tf import transformations
@@ -9,9 +10,12 @@ from ieee2014_mission_runner import fine_targeting, render
 
 INCH = fine_targeting.INCH
 
+course_length = (97 - 3/4 * 2) * INCH
+course_width = (49 - 3/4 * 2) * INCH
+
+blocks = [random.uniform(-course_width/2+5*INCH, course_width/2-5*INCH) for i in xrange(3)]
+
 def draw_scene(r):
-	course_length = (97 - 3/4 * 2) * INCH
-	course_width = (49 - 3/4 * 2) * INCH
 
 	'''r.draw_polygon([
 		(+course_length/2, +course_width/2, 0),
@@ -64,5 +68,13 @@ def draw_scene(r):
 	line(cvtLogical_to_Forrest((12*INCH, 9.88*INCH)), cvtLogical_to_Forrest((course_length,9.88*INCH))),
 	
 	# blocks!
+	for x, y in zip([cvtLogical_to_Forrest((35.25*INCH, 0))[0], cvtLogical_to_Forrest((49*INCH, 0))[0], cvtLogical_to_Forrest((57.75*INCH, 0))[0]], blocks):
+		print y
+		r.draw_polygon([
+			(x - 3*INCH / 2, y - 3*INCH / 2, 0),
+			(x + 3*INCH / 2, y - 3*INCH / 2, 0),
+			(x + 3*INCH / 2, y + 3*INCH / 2, 0),
+			(x - 3*INCH / 2, y + 3*INCH / 2, 0),
+		], (255, 0, 0, 255))
 	
 	fine_targeting.draw_target(r)
