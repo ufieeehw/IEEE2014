@@ -2,6 +2,7 @@
 
 import math
 import itertools
+import time
 
 import numpy
 from twisted.internet import reactor, defer, threads
@@ -190,6 +191,12 @@ def main():
     yield go_to_point(start_pos)
     
     yield util.sleep(1)
+    
+    # XXX test
+    img_msg = yield gun_camera_image_topic.get_next_message()
+    img = bridge.imgmsg_to_cv2(img_msg, "bgr8")
+    t = int(time.time())
+    cv2.imwrite('/tmp/blocks-%i.png' % (t,), img)
     
     # look for blocks, fill in block_positions
     
