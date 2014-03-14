@@ -143,7 +143,16 @@ def do_fine_targeting(approx_pos, current_angles):
 
 @defer.inlineCallbacks
 def main():
+    yield set_pan_tilt(0.3, 0.0)
+    
+    @defer.inlineCallbacks
+    def signalStarted():
+        yield change_clip_position(1)
+        yield change_clip_position(3)
+        yield change_clip_position(1)
+    
     colors = []
+    started = False
     while True:
         msg = yield get_color()
         #print msg.clear
@@ -151,20 +160,26 @@ def main():
         yield util.sleep(.1)
         
         if len(colors) > 20:
+            if not started:
+                signalStarted()
+                started = True
             delta = numpy.mean(colors[-10:]) - numpy.mean(colors[-20:-10])
             print delta
             if delta > 5:
                 break
+    
+    # XXX
+    yield set_pan_tilt(0.0, 0.0)
+    yield util.sleep(1)
+    return
     
     start_pos = (-1.09, -0.34)
     end_pos = (1.06, -0.40)
     
     # XXX wait for start
     
-    pan_tilt_task = set_pan_tilt(0.3, 0.0)
     yield go_to_point(start_pos + numpy.array([0.2, 0]))
     yield go_to_point(start_pos)
-    yield pan_tilt_task
     
     yield util.sleep(1)
     
