@@ -15,6 +15,7 @@ import image_geometry
 
 from ieee2014_controller.srv import SetEnabled
 from ieee2014_maestro.srv import ClipPos, FireDart
+from xmega_connector.srv import GetColor
 import sys
 
 import ieee2014_mission_runner
@@ -40,6 +41,8 @@ target_solver_set_enabled = util.wrap_blocking_func(rospy.ServiceProxy(
     'target_solver/set_enabled', SetEnabled, persistent=True))
 detect_blocks = util.wrap_blocking_func(rospy.ServiceProxy(
     'Detect_Blocks', Detect_Blocks, persistent=True))
+get_color = util.wrap_blocking_func(rospy.ServiceProxy(
+    'xmega_connector/get_color', GetColor, persistent=True))
 
 @defer.inlineCallbacks
 def change_clip_position(pos):
@@ -140,6 +143,19 @@ def do_fine_targeting(approx_pos, current_angles):
 
 @defer.inlineCallbacks
 def main():
+    colors = []
+    while True:
+        msg = yield get_color()
+        #print msg.clear
+        colors.append(msg.clear)
+        yield util.sleep(.1)
+        
+        if len(colors) > 20:
+            delta = numpy.mean(colors[-10:]) - numpy.mean(colors[-20:-10])
+            print delta
+            if delta > 5:
+                break
+    
     start_pos = (-1.09, -0.34)
     end_pos = (1.06, -0.40)
     
@@ -154,7 +170,7 @@ def main():
     
     # look for blocks, fill in block_positions
     
-    if False:
+    if True:
         detect_blocks(True)
         pan = 0.3
         for attempt in itertools.count():
