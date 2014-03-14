@@ -189,10 +189,10 @@ def main():
     #return
     # end XXX
     
-    yield go_to_point(start_pos + numpy.array([0.2, 0]))
-    yield go_to_point(start_pos)
+    #yield go_to_point(start_pos + numpy.array([0.2, 0]))
+    #yield go_to_point(start_pos)
     
-    yield util.sleep(1)
+    #yield util.sleep(1)
     
     # XXX test
     img_msg = yield gun_camera_image_topic.get_next_message()
