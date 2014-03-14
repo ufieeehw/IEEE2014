@@ -228,6 +228,10 @@ def main():
         coarse_target_task = set_pan_tilt(**coarse_angles)
         yield turn_and_go(block_position)
         
+        # let particle filter reconverge then recenter
+        yield util.sleep(2)
+        yield turn_and_go(block_position)
+        
         clip_task = change_clip_position(i+1)
         start = reactor.seconds()
         sleep_task = util.sleep(3)
