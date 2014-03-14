@@ -132,6 +132,7 @@ class Template(object):
             debug_img = debug_img//2 + moved_template[:,:,:3]//2
             cv2.imwrite('/tmp/%i/%i-src.png' % (start_time, t), img)
             cv2.imwrite('/tmp/%i/%i-debug.png' % (start_time, t), debug_img)
+            cv2.imwrite('/tmp/%i/%i-matchness.png' % (start_time, t), normalize(matchness))
         
         if debug_images:
             cv2.imshow('/tmp/%i/%i-matchness.png' % (start_time, t), normalize(matchness))
