@@ -173,6 +173,8 @@ def main():
             if delta > 5:
                 break
     
+    run_start = reactor.seconds()
+    
     # XXX
     #yield set_pan_tilt(0.0, 0.0)
     #yield util.sleep(1)
@@ -241,7 +243,10 @@ def main():
         yield fire_dart(True) # internally waits 1 second
         print 'done firing'
     yield go_to_point(end_pos)
+    run_end = reactor.seconds()
     yield change_clip_position(4)
+    
+    print 'run took', run_end - run_start
 
 @defer.inlineCallbacks
 def main2():
