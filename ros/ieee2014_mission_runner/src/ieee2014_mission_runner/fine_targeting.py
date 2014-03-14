@@ -42,18 +42,21 @@ def pad(x):
 def roll_up_left_a_quarter(x):
     return numpy.roll(numpy.roll(x, -x.shape[1]//4, 1), -x.shape[0]//4, 0)
 
+def roll_up_left_a_half(x):
+    return numpy.roll(numpy.roll(x, -x.shape[1]//4, 1), -x.shape[0]//4, 0)
+
 def _cross_correlate(signal, template):
     return numpy.fft.ifft2(
         numpy.fft.fft2(signal) * numpy.fft.fft2(template).conj()
-    )[:signal.shape[0]//2, :signal.shape[1]//2].real
+    ).real
 
 def cross_correlate(signal, template, template_weight):
     # at every possible alignment of signal and template:
     # correlation = sum(signal*template*template_weight)
     
-    signal_padded = pad(signal - numpy.mean(signal))
-    template_padded = roll_up_left_a_quarter(pad(template - numpy.mean(template_weight*template)))
-    template_weight_padded = roll_up_left_a_quarter(pad(template_weight))
+    signal_padded = signal - numpy.mean(signal)
+    template_padded = roll_up_left_a_half(template - numpy.mean(template_weight*template))
+    template_weight_padded = roll_up_left_a_half(template_weight)
     
     cross_correlation = _cross_correlate(signal_padded, template_weight_padded*template_padded)
     
