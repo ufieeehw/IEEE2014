@@ -15,6 +15,7 @@ from tf import transformations
 from ieee2014_mission_runner import render
 
 start_time = int(time.time())
+print '/tmp/%i' % (start_time,)
 try:
     os.mkdir('/tmp/%i' % (start_time,))
 except:
@@ -30,18 +31,44 @@ def is_opaque(pixel):
     return pixel[3] >= 128
 
 def pad(x):
-    return cv2.copyMakeBorder(x,
-        0, x.shape[0],
-        0, x.shape[1],
-        cv2.BORDER_CONSTANT, value=(0, 0, 0))
+    #return cv2.copyMakeBorder(x,
+    #    0, x.shape[0],
+    #    0, x.shape[1],
+    #    cv2.BORDER_CONSTANT, value=(0, 0, 0))
+    res = numpy.zeros((2*x.shape[0], 2*x.shape[1]))
+    res[:x.shape[0], :x.shape[1]] = x
+    return res
 
-def cross_correlate(signal, template):
-    template_padded = pad(template)
-    template_padded_rolled = numpy.roll(numpy.roll(template_padded, -template_padded.shape[1]//4, 1), -template_padded.shape[0]//4, 0)
-    #cv2.imshow('template_padded_rolled', template_padded_rolled)
+def roll_up_left_a_quarter(x):
+    return numpy.roll(numpy.roll(x, -x.shape[1]//4, 1), -x.shape[0]//4, 0)
+
+def _cross_correlate(signal, template):
     return numpy.fft.ifft2(
-        numpy.fft.fft2(pad(signal)) * numpy.fft.fft2(template_padded_rolled).conj()
-    )[:signal.shape[0], :signal.shape[1]].real
+        numpy.fft.fft2(signal) * numpy.fft.fft2(template).conj()
+    )[:signal.shape[0]//2, :signal.shape[1]//2].real
+
+def cross_correlate(signal, template, template_weight):
+    # at every possible alignment of signal and template:
+    # correlation = sum(signal*template*template_weight)
+    
+    signal_padded = pad(signal - numpy.mean(signal))
+    template_padded = roll_up_left_a_quarter(pad(template - numpy.mean(template_weight*template)))
+    template_weight_padded = roll_up_left_a_quarter(pad(template_weight))
+    
+    cross_correlation = _cross_correlate(signal_padded, template_weight_padded*template_padded)
+    
+    #cv2.imshow('templ', normalize(template_weight))
+    #cv2.imshow("a", normalize(cross_correlation))
+    #cv2.imshow("b", normalize(_cross_correlate(signal_padded**2, template_weight_padded)))
+    #cv2.waitKey()
+    
+    tmp = cross_correlation / numpy.sqrt(_cross_correlate(signal_padded**2, template_weight_padded))
+    res = tmp / math.sqrt(numpy.sum(template_weight_padded*template_padded**2))
+    
+    print numpy.min(res), numpy.max(res)
+    
+    return res
+    
 
 class Template(object):
     def __init__(self, template_img_with_alpha):
@@ -50,7 +77,8 @@ class Template(object):
         # scale of result doesn't matter
         # scale and bias of input shouldn't matter
         
-        self._orig = template_img_with_alpha
+        assert template_img_with_alpha.shape[2] == 4
+        self._orig = template_img_with_alpha.astype(float)
         
         opaque = template_img_with_alpha[:, :, 3] >= 128
         opaque3 = numpy.dstack([opaque]*3)
@@ -73,8 +101,9 @@ class Template(object):
         self._template = res # floating point 3-channel image
     
     def match(self, img):
-        assert img.shape == self._template.shape
-        matchness = product(numpy.maximum(0, cross_correlate(img[:,:,c], self._template[:,:,c])) for c in xrange(img.shape[2]))
+        img = img.astype(float)
+        assert img.shape == (self._orig.shape[0], self._orig.shape[1], 3)
+        matchness = product(numpy.maximum(0, cross_correlate(img[:,:,c], self._orig[:,:,c], self._orig[:,:,3]/255.)) for c in xrange(img.shape[2]))
         
         
         important = matchness[matchness.shape[0]//4:matchness.shape[0]*3//4, matchness.shape[1]//4:matchness.shape[1]*3//4]
@@ -92,7 +121,7 @@ class Template(object):
             debug_img = debug_img//2 + moved_template[:,:,:3]//2
             cv2.imwrite('/tmp/%i/%i-src.png' % (start_time, t), img)
             cv2.imwrite('/tmp/%i/%i-debug.png' % (start_time, t), debug_img)
-            #cv2.waitKey()
+            cv2.waitKey()
         
         '''for y, row in enumerate(template_src):
             for x, pixel in enumerate(row):
