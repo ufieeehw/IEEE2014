@@ -230,7 +230,7 @@ def main():
         
         # let particle filter reconverge then recenter
         yield util.sleep(2)
-        yield turn_and_go(block_position)
+        yield go_to_point(block_position)
         
         clip_task = change_clip_position(i+1)
         start = reactor.seconds()
