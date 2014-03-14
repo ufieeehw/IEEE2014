@@ -8,6 +8,7 @@ import tf
 import os
 import sys
 import traceback
+
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
 from ieee2014_vision.srv import *
@@ -15,11 +16,17 @@ from geometry_msgs.msg import Pose2D, PoseStamped
 from dynamixel_msgs.msg import JointState
 from ieee2014_vision.msg import BlockPositions
 from std_msgs.msg import Float64, Bool
+
 try:
     from IEEE2014Functions import image_publisher as impub
 except:
     traceback.print_exc(file=sys.stdout)
     print "Image Publisher Import Failed"
+try:
+    from IEEE2014Functions import post_cleanup
+except:
+    print "post_cleanup import filed in blockPublisher"
+
 
 ## Sub :: sim_pose | pose ; camera pan/tilt ;
 ## Pub :: blockPositions ;
@@ -39,8 +46,8 @@ class blockHandler:
         self.cameraFwd = 5.25 * 0.0254 #Cam v2 (not precise)
         self.cameraLeft = 0
         self.start_pos = (-self.course_length/2 + (6*0.0254), -self.course_width/2 + ((5+5.25+0.75)*0.0254))    
-        #self.current_pose = self.start_pose
-        self.current_pose = None
+        #self.current_pos = self.start_pose
+        self.current_pos = None
         self.rpy = (0,0,0)
         #Variable initialized parameters
         self.pan = 0
@@ -56,6 +63,9 @@ class blockHandler:
         self.image_sub = rospy.Subscriber('/gun_camera/image_rect_color', Image, self.start_detection)
         self.pose_sub = rospy.Subscriber('pose', PoseStamped, self.set_pose)
         
+        if(self.sim =='Y'):
+            self.current_pos = self.start_pos
+            self.rpy = (0,0,0.3)
         
         if(self.publish_images == 'Y'):
             self.image_pub = impub.image_sender("Block_Vision")
@@ -101,7 +111,7 @@ class blockHandler:
             data.pose.orientation.w)
 
         self.rpy = tf.transformations.euler_from_quaternion(quaternion) #Roll, Pitch, Yaw: Radians
-        self.current_pose = (data.pose.position.x,data.pose.position.y)
+        self.current_pos = (data.pose.position.x,data.pose.position.y)
 
 
     def start_detection(self, data):
@@ -109,11 +119,11 @@ class blockHandler:
             print "Vision Not Active"
             rospy.sleep(0.5)
             return
-        if self.current_pose is None:
+        if self.current_pos is None:
             print "No Position Resolved"
             rospy.sleep(0.1)
             return
-        
+        print "Preforming Vision"
         image = None
         try:
             image = np.array(self.bridge.imgmsg_to_cv(data,"bgr8"))
@@ -144,11 +154,8 @@ class blockHandler:
             rospy.loginfo("||| block_publisher: No Blocks Detected") #-dbg
             rospy.sleep(0.1) #-dbg
             return
-
-
-
         #Assuming robotpos to be 0!
-        robotPos = self.current_pose
+        robotPos = self.current_pos
         yaw = self.rpy[2] + self.pan #CHECK: Assuming positive left for camera PAN
         #cameraPos = (robotPos[0] + (self.cameraFwd*np.cos(yaw)), robotPos[1] + (self.cameraFwd*np.sin(yaw)))
     
@@ -156,8 +163,8 @@ class blockHandler:
 
         msg = BlockPositions()
         msg.blocks = []
-        doxy = []
-        doabspos = []
+        xy_draw = []
+        abs_pos_draw = []
         #rospy.loginfo(transformCoordinates((0,0),(1,1),0))
 
         for pos, xy in zip(relPositions, imxy):
@@ -170,28 +177,31 @@ class blockHandler:
             absolutePos = (robotPos[0] + xOffset, robotPos[1] + yOffset)
 
             if ((absolutePos[0] < 0.62 + self.course_length/2) and (np.abs(absolutePos[1]) < self.course_width/2)):
+            
+                send_pos = post_cleanup.find_best_fit(absolutePos)
+                
+                
                 absPos = Pose2D()
-                absPos.x = absolutePos[0]
-                absPos.y = absolutePos[1]
+                absPos.x = send_pos[0]
+                absPos.y = send_pos[1]
                 absPos.theta = 0
                 msg.blocks.append(absPos)
-                doxy.append(xy)
-                doabspos.append(absolutePos)
+                
+                xy_draw.append(xy)
+                abs_pos_draw.append(absolutePos)
         
         if self.publish_images == 'Y' and image != None:
-            for k in range(len(doxy)):
+            for k in range(len(xy_draw)):
                 xy = imxy[k]
                 cv2.circle(image, xy,5,(50,220,50),thickness=-1)
                 pos = relPositions[k]
                 cv2.putText(image, str(pos[0])+ ', ' +str(pos[1]), xy, cv2.FONT_HERSHEY_PLAIN, 0.8, (0,0,255), thickness=1)
-                cv2.putText(image, str(doabspos[k][0])+ ', ' +str(doabspos[k][1]), (xy[0] + 10, xy[1] + 10), cv2.FONT_HERSHEY_PLAIN, 0.8, (0,150,240), thickness=1)
+                cv2.putText(image, str(abs_pos_draw[k][0])+ ', ' +str(abs_pos_draw[k][1]), (xy[0] + 10, xy[1] + 10), cv2.FONT_HERSHEY_PLAIN, 0.8, (0,150,240), thickness=1)
             self.image_pub.send_message(image)
 
         self.pub.publish(msg)
         #rospy.sleep(0.2) #Is this necessary? Will it reduce stress on odroid?
         
-
-
 if __name__=='__main__':
     try:
         blockhandlerObj = blockHandler()

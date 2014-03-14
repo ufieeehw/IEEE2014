@@ -29,9 +29,9 @@ from geometry_msgs.msg import TwistStamped, PoseStamped, Pose, Point, Quaternion
 #Forrest:
 SCALE = 200
 def cvtLogical_to_Forrest((x,y)):
-	course_length = (97 - 3/4 * 2) * 0.0254
-	course_width = (49 - 3/4 * 2) * 0.0254
-	return (x-course_length/2,y-course_width/2)
+    course_length = (97 - 3/4 * 2) * 0.0254
+    course_width = (49 - 3/4 * 2) * 0.0254
+    return (x-course_length/2,y-course_width/2)
 
 def round_point((x, y)):
     return int(SCALE*x+320+.5), int(SCALE*-y+240+.5)
@@ -39,270 +39,271 @@ def reverse_point((x, y)):
     return (x-320.0)/SCALE, -(y-240.0)/SCALE
 #/Forrest
 def getNodeList():
-	nodeList = os.popen('rosnode list').read()
-	nodes = string.split(string.replace(nodeList,'\n', ' '))
-	return nodes
+    nodeList = os.popen('rosnode list').read()
+    nodes = string.split(string.replace(nodeList,'\n', ' '))
+    return nodes
 
 
 def cv_to_pygame(image):
-	#np cv mat -> pygame image
-	return pygame.image.frombuffer(image.tostring(), image.shape[1::-1], "RGB")
+    #np cv mat -> pygame image
+    return pygame.image.frombuffer(image.tostring(), image.shape[1::-1], "RGB")
 class Arc(object):
-	def __init__(self, center, radius, (start_angle,stop_angle), thickness):
-		self.center = center
-		self.radius = radius
-		self.start_angle = start_angle
-		self.stop_angle = stop_angle
-		self.thickness = thickness
-	def draw(self, display):
-		pygame.draw.circle(display, (255, 255, 255), round_point(self.center), int(SCALE*self.radius), self.thickness)
+    def __init__(self, center, radius, (start_angle,stop_angle), thickness):
+        self.center = center
+        self.radius = radius
+        self.start_angle = start_angle
+        self.stop_angle = stop_angle
+        self.thickness = thickness
+    def draw(self, display):
+        pygame.draw.circle(display, (255, 255, 255), round_point(self.center), int(SCALE*self.radius), self.thickness)
 
 
 class Line(object):
-	#Forrest's line object
-	def __init__(self, point1, point2, width=2):
-		self.point1 = point1
-		self.point2 = point2
-		self.width = width
-	def draw(self, display):
-		pygame.draw.line(display, (255, 255, 255), round_point(self.point1), round_point(self.point2), self.width)
+    #Forrest's line object
+    def __init__(self, point1, point2, width=2):
+        self.point1 = point1
+        self.point2 = point2
+        self.width = width
+    def draw(self, display):
+        pygame.draw.line(display, (255, 255, 255), round_point(self.point1), round_point(self.point2), self.width)
 
 class Robot(object):
-	def __init__(self, position, angle):
-		self.position = position
-		self.angle = angle
-		#initialize stuff:
-		self.tilt = 0.0
-		self.pan = 0.0
-		self.targ_tilt = 0.0
-		self.targ_pan = 0.0
-		self.debug = rospy.get_param('~/state_visualizer/debug', "N")
-		sim = rospy.get_param('~/state_visualizer/sim', "N")
-		if(sim == 'Y'):
-			rospy.loginfo("\nNOTE: state_visualizer Using simulation pose data")
-			self.poseSub = rospy.Subscriber('sim_pose', PoseStamped, self.set_pose)
-			#if not '/ieee2014
-			
-			if self.debug == 'N':
-				self.pan_sub = rospy.Subscriber('/pan_controller/command',Float64, self.sim_set_pan) 
-				self.tilt_sub = rospy.Subscriber('/tilt_controller/command',Float64, self.sim_set_tilt)
-			else:
-				self.pan_sub = rospy.Subscriber('/pan_controller/state', JointState, self.set_pan)
-				self.tilt_sub = rospy.Subscriber('/tilt_controller/state', JointState, self.set_tilt)
-			
-		elif(sim == 'N'):
-			rospy.loginfo("\nNOTE: state_visualizer NOT simulating")
-			self.poseSub = rospy.Subscriber('pose', PoseStamped, self.set_pose)
-	
-			self.pan_sub = rospy.Subscriber('/pan_controller/state', JointState, self.set_pan)
-			self.tilt_sub = rospy.Subscriber('/tilt_controller/state', JointState, self.set_tilt)
-			
-			
-	def sim_set_tilt(self,data):
-		self.targ_tilt = data.data
-	def sim_set_pan(self,data):
-		self.targ_pan = data.data
-	
-	def set_pan(self,data):
-		self.pan = data.current_pos
-		self.targ_pan = data.goal_pos
-	def set_tilt(self,data):
-		self.tilt = data.current_pos
-		self.targ_tilt = data.goal_pos
+    def __init__(self, position, angle):
+        self.position = position
+        self.angle = angle
+        #initialize stuff:
+        self.tilt = 0.0
+        self.pan = 0.0
+        self.targ_tilt = 0.0
+        self.targ_pan = 0.0
+        self.debug = rospy.get_param('~/state_visualizer/debug', "N")
+        sim = rospy.get_param('~/state_visualizer/sim', "N")
+        if(sim == 'Y'):
+            rospy.loginfo("\nNOTE: state_visualizer Using simulation pose data")
+            self.poseSub = rospy.Subscriber('pose', PoseStamped, self.set_pose)
+            #if not '/ieee2014
+            
+            if self.debug == 'N':
+                self.pan_sub = rospy.Subscriber('/pan_controller/command',Float64, self.sim_set_pan) 
+                self.tilt_sub = rospy.Subscriber('/tilt_controller/command',Float64, self.sim_set_tilt)
+            else:
+                self.pan_sub = rospy.Subscriber('/pan_controller/state', JointState, self.set_pan)
+                self.tilt_sub = rospy.Subscriber('/tilt_controller/state', JointState, self.set_tilt)
+            
+        elif(sim == 'N'):
+            rospy.loginfo("\nNOTE: state_visualizer NOT simulating")
+            self.poseSub = rospy.Subscriber('pose', PoseStamped, self.set_pose)
+    
+            self.pan_sub = rospy.Subscriber('/pan_controller/state', JointState, self.set_pan)
+            self.tilt_sub = rospy.Subscriber('/tilt_controller/state', JointState, self.set_tilt)
+            
+            
+    def sim_set_tilt(self,data):
+        self.targ_tilt = data.data
+    def sim_set_pan(self,data):
+        self.targ_pan = data.data
+    
+    def set_pan(self,data):
+        self.pan = data.current_pos
+        self.targ_pan = data.goal_pos
+    def set_tilt(self,data):
+        self.tilt = data.current_pos
+        self.targ_tilt = data.goal_pos
 
-	def set_pose(self, data):
-		self.position = (data.pose.position.x,data.pose.position.y)
-		
-		quaternion = (
-			data.pose.orientation.x,
-			data.pose.orientation.y,
-			data.pose.orientation.z,
-			data.pose.orientation.w)
-		#Quaternions, ah
-		rpy = transformations.euler_from_quaternion(quaternion) #Roll, Pitch, Yaw: Radians
-		self.angle = rpy[2]
-	
-	
-	#Forrest:
-	@property
-	def forward_vector(self):
-		return np.array((math.cos(self.angle), math.sin(self.angle)), np.float32)
-	@property
-	def gun_pan(self):
-		return np.array((math.cos(self.angle + self.pan), math.sin(self.angle + self.pan)), np.float32)
-	@property
-	def goal_vec(self):
-		return np.array((math.cos(self.angle + self.targ_pan), math.sin(self.angle + self.targ_pan)), np.float32)
-	
-	#@property
-	#def gun_tilt(self):
-	#	return np.array((math.cos(self.angle + self.pan), math.sin(self.angle + self.pan))
+    def set_pose(self, data):
+        self.position = (data.pose.position.x,data.pose.position.y)
+        
+        quaternion = (
+            data.pose.orientation.x,
+            data.pose.orientation.y,
+            data.pose.orientation.z,
+            data.pose.orientation.w)
+        #Quaternions, ah
+        rpy = transformations.euler_from_quaternion(quaternion) #Roll, Pitch, Yaw: Radians
+        self.angle = rpy[2]
+    
+    
+    #Forrest:
+    @property
+    def forward_vector(self):
+        return np.array((math.cos(self.angle), math.sin(self.angle)), np.float32)
+    @property
+    def gun_pan(self):
+        return np.array((math.cos(self.angle + self.pan), math.sin(self.angle + self.pan)), np.float32)
+    @property
+    def goal_vec(self):
+        return np.array((math.cos(self.angle + self.targ_pan), math.sin(self.angle + self.targ_pan)), np.float32)
+    
+    #@property
+    #def gun_tilt(self):
+    #    return np.array((math.cos(self.angle + self.pan), math.sin(self.angle + self.pan))
 
-	def draw(self, display):
-		r = .05
-		pygame.draw.circle(display, (0, 255, 0), round_point(self.position), int(SCALE*r+.5))
-		#Orientation
-		pygame.draw.line(display, (0, 0, 255), round_point(self.position), round_point(tuple(np.add(self.position, 2*r*self.forward_vector))))
+    def draw(self, display):
+        r = .05
+        pygame.draw.circle(display, (0, 255, 0), round_point(self.position), int(SCALE*r+.5))
+        #Orientation
+        pygame.draw.line(display, (0, 0, 255), round_point(self.position), round_point(tuple(np.add(self.position, 2*r*self.forward_vector))))
 
-		#Gun Draw
-		gun_display = (100,100)
-		
-		#Real gun pitch
-		pygame.draw.line(display,(255,0,60), gun_display, (gun_display[0] + 100*math.cos(-self.tilt), gun_display[1] + 100*math.sin(-self.tilt)))
-		#Desired gun pitch
-		pygame.draw.line(display,(200,150,60), gun_display, (gun_display[0] + 75*math.cos(-self.targ_tilt), gun_display[1] + 75*math.sin(-self.targ_tilt)))
-		
-		#Desired gun yaw
-		pygame.draw.line(display,(200, 150, 60), round_point(self.position), round_point(tuple(np.add(self.position,self.goal_vec))))
-		#Gun pan
-		pygame.draw.line(display, (255,0,0), round_point(self.position), round_point(tuple(np.add(self.position, r*self.gun_pan))))
+        #Gun Draw
+        gun_display = (100,100)
+        
+        #Real gun pitch
+        pygame.draw.line(display,(255,0,60), gun_display, (gun_display[0] + 100*math.cos(-self.tilt), gun_display[1] + 100*math.sin(-self.tilt)))
+        #Desired gun pitch
+        pygame.draw.line(display,(200,150,60), gun_display, (gun_display[0] + 75*math.cos(-self.targ_tilt), gun_display[1] + 75*math.sin(-self.targ_tilt)))
+        
+        #Desired gun yaw
+        pygame.draw.line(display,(200, 150, 60), round_point(self.position), round_point(tuple(np.add(self.position,self.goal_vec))))
+        #Gun pan
+        pygame.draw.line(display, (255,0,0), round_point(self.position), round_point(tuple(np.add(self.position, r*self.gun_pan))))
 
 class blockHandler(object):
-	def __init__(self):
-		self.block_sub = rospy.Subscriber('block_positions',BlockPositions, self.update_blocks)
-		self.blockwidth = 3*0.0254 #3 inches, some meters?
-		self.blockpositions = []
-	def update_blocks(self, blocklist):
-		
-		self.blockpositions = []
-		for block in blocklist.blocks:
-			self.blockpositions.append((block.x,block.y))
-			
-		if self.blockpositions == []:
-			return
-		
-	def draw(self, display):
-		if self.blockpositions == []:
-			#Put text display here some day
-			return
-		for block in self.blockpositions:
-			blockrect = ( round_point( ( block[0]-(self.blockwidth/2), block[1] - (self.blockwidth/2)) ), (5,5) )
-			pygame.draw.rect(display, (0,20,240),	blockrect, 0)
+    def __init__(self):
+        self.block_sub = rospy.Subscriber('block_positions',BlockPositions, self.update_blocks)
+        self.blockwidth = 3*0.0254 #3 inches, some meters?
+        self.blockpositions = []
+    def update_blocks(self, blocklist):
+        
+        self.blockpositions = []
+        for block in blocklist.blocks:
+            self.blockpositions.append((block.x,block.y))
+            
+        if self.blockpositions == []:
+            return
+        
+    def draw(self, display):
+        if self.blockpositions == []:
+            #Put text display here some day
+            return
+        for block in self.blockpositions:
+            blockrect = ( round_point( ( block[0]-(self.blockwidth/2), block[1] - (self.blockwidth/2)) ), (5,5) )
+            pygame.draw.rect(display, (0,20,240),    blockrect, 0)
 
 def main():
-	rospy.init_node('state_visualizer')
- 	#Forrest:
-	course_length = (97 - 3/4 * 2) * 0.0254
-	course_width = (49 - 3/4 * 2) * 0.0254
-	robot = Robot((-course_length/2,-course_width/2),0)
-	
-	course = [
-		Line((-course_length/2, +course_width/2), (+course_length/2, +course_width/2)),
-		Line((+course_length/2, +course_width/2), (+course_length/2, -course_width/2)),
-		Line((+course_length/2, -course_width/2), (-course_length/2, -course_width/2)),
-		Line((-course_length/2, -course_width/2), (-course_length/2, +course_width/2)),
-		
-		Line(cvtLogical_to_Forrest((35.25*0.0254, 0)), cvtLogical_to_Forrest((35.25*0.0254, course_width)), 6),
-		Line(cvtLogical_to_Forrest((57.75*0.0254, 0)), cvtLogical_to_Forrest((57.75*0.0254, course_width)), 6),
-		Arc((-course_length/2, 0), 49*0.0245, (0,180),6),
-		
-		Line(cvtLogical_to_Forrest((12*0.0254, 9.88*0.0254)), cvtLogical_to_Forrest((course_length,9.88*0.0254)), 6),
-		
-		robot,
-		blockHandler()
-	]
-	
-	desired_pose_pub = rospy.Publisher('desired_pose', PoseStamped)
+    rospy.init_node('state_visualizer')
+     #Forrest:
+    course_length = (97 - 3/4 * 2) * 0.0254
+    course_width = (49 - 3/4 * 2) * 0.0254
+    robot = Robot((-course_length/2,-course_width/2),0)
+    
+    course = [
+        Line((-course_length/2, +course_width/2), (+course_length/2, +course_width/2)),
+        Line((+course_length/2, +course_width/2), (+course_length/2, -course_width/2)),
+        Line((+course_length/2, -course_width/2), (-course_length/2, -course_width/2)),
+        Line((-course_length/2, -course_width/2), (-course_length/2, +course_width/2)),
+        
+        Line(cvtLogical_to_Forrest((35.25*0.0254, 0)), cvtLogical_to_Forrest((35.25*0.0254, course_width)), 6),
+        Line(cvtLogical_to_Forrest((57.75*0.0254, 0)), cvtLogical_to_Forrest((57.75*0.0254, course_width)), 6),
+        Arc((-course_length/2, 0), 49*0.0245, (0,180),6),
+        
+        Line(cvtLogical_to_Forrest((12*0.0254, 9.88*0.0254)), cvtLogical_to_Forrest((course_length,9.88*0.0254)), 6),
+        
+        robot,
+        blockHandler()
+    ]
+    
+    desired_pose_pub = rospy.Publisher('desired_pose', PoseStamped)
     enable_mouse = rospy.get_param('~/state_visualizer/mouse', "N")
-	blockobj = blockHandler()
-	display = pygame.display.set_mode((640,480))
-	
-	class waypoint(object):
-		def __init__(self, start, angle=0):
-			self.position = start
-			self.angle = angle
-			
-		def set_pos(self,pos):
-			if((pos[0] < course_length/2) and (pos[0] > -course_length/2) and
-				(pos[1] < course_width/2) and (pos[1] > -course_width/2)):
-				self.position = pos
-			else:
-				pass
-				#No change!
-		def set_ang(self, ang):
-			self.angle = ang
-		
-		@property
-		def ang(self):
-			#Add constraints
-			return self.angle
-			
-		@property
-		def pos(self):
-			#Add constraints
-			return self.position
-		
-		
-	robot_waypoint = waypoint((-course_length/2 + (6*0.0254), -course_width/2 + ((5+5.25)*0.0254)), 0)
-	
-	
-	def update_screen():
-		for event in pygame.event.get():
-			if event.type == pygame.QUIT:
-				return
+    blockobj = blockHandler()
+    display = pygame.display.set_mode((640,480))
+    
+    class waypoint(object):
+        def __init__(self, start, angle=0):
+            self.position = start
+            self.angle = angle
+            
+        def set_pos(self,pos):
+            if((pos[0] < course_length/2) and (pos[0] > -course_length/2) and
+                (pos[1] < course_width/2) and (pos[1] > -course_width/2)):
+                self.position = pos
+            else:
+                pass
+                #No change!
+        def set_ang(self, ang):
+            self.angle = ang
+        
+        @property
+        def ang(self):
+            #Add constraints
+            return self.angle
+            
+        @property
+        def pos(self):
+            #Add constraints
+            return self.position
+        
+        
+    robot_waypoint = waypoint((-course_length/2 + (6*0.0254), -course_width/2 + ((5+5.25)*0.0254)), 0)
+    
+    
+    def update_screen():
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return
 
-			elif event.type == pygame.MOUSEBUTTONDOWN:
-				#rospy.loginfo("HELLO")
-				current_position = robot.position
-				current_angle = robot.angle
-				
-				if event.button == 1 and enable_mouse == "Y":
-					robot_waypoint.set_pos(reverse_point(event.pos))
-					desired_pose_pub.publish(PoseStamped(
-						header=Header(
-							stamp=rospy.Time.now(),
-							frame_id='/course',
-						),
-						pose=Pose(
-							position=Point(robot_waypoint.pos[0], robot_waypoint.pos[1], 0.0),
-							orientation=Quaternion(*transformations.quaternion_from_euler(0,0,robot_waypoint.ang)),
-					  ),
-					))
-					rospy.loginfo(robot_waypoint.pos)
-				elif event.button == 3 and enable_mouse == "Y":
-					apos = reverse_point(event.pos)
-					yd = apos[1]-robot.position[1]
-					xd = apos[0]-robot.position[0]
-					principal_angle = np.arctan(yd/xd)
-					if yd > 0:
-						if xd > 0:
-							target_angle = principal_angle
-						else:
-							target_angle = np.pi/2 - (-principal_angle) + np.pi/2
-						
-					elif yd < 0:
-						if xd > 0:
-							target_angle = principal_angle
-						else:
-							target_angle = -(np.pi/2 - principal_angle) - np.pi/2
-					robot_waypoint.set_ang(target_angle)
-					desired_pose_pub.publish(PoseStamped(
-						header=Header(
-							stamp=rospy.Time.now(),
-							frame_id='/course',
-						),
-						pose=Pose(
-							position=Point(robot_waypoint.pos[0],robot_waypoint.pos[1],0.0),
-							orientation=Quaternion(*transformations.quaternion_from_euler(0,0,target_angle)),
-					  ),
-					))
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                #rospy.loginfo("HELLO")
+                current_position = robot.position
+                current_angle = robot.angle
+                
+                if event.button == 1 and enable_mouse == "Y":
+                    robot_waypoint.set_pos(reverse_point(event.pos))
+                    desired_pose_pub.publish(PoseStamped(
+                        header=Header(
+                            stamp=rospy.Time.now(),
+                            frame_id='/course',
+                        ),
+                        pose=Pose(
+                            position=Point(robot_waypoint.pos[0], robot_waypoint.pos[1], 0.0),
+                            orientation=Quaternion(*transformations.quaternion_from_euler(0,0,robot_waypoint.ang)),
+                      ),
+                    ))
+                    rospy.loginfo(robot_waypoint.pos)
+                elif event.button == 3 and enable_mouse == "Y":
+                    print event.pos
+                    apos = reverse_point(event.pos)
+                    yd = apos[1]-robot.position[1]
+                    xd = apos[0]-robot.position[0]
+                    principal_angle = np.arctan(yd/xd)
+                    if yd > 0:
+                        if xd > 0:
+                            target_angle = principal_angle
+                        else:
+                            target_angle = np.pi/2 - (-principal_angle) + np.pi/2
+                        
+                    elif yd < 0:
+                        if xd > 0:
+                            target_angle = principal_angle
+                        else:
+                            target_angle = -(np.pi/2 - principal_angle) - np.pi/2
+                    robot_waypoint.set_ang(target_angle)
+                    desired_pose_pub.publish(PoseStamped(
+                        header=Header(
+                            stamp=rospy.Time.now(),
+                            frame_id='/course',
+                        ),
+                        pose=Pose(
+                            position=Point(robot_waypoint.pos[0],robot_waypoint.pos[1],0.0),
+                            orientation=Quaternion(*transformations.quaternion_from_euler(0,0,target_angle)),
+                      ),
+                    ))
 
-		display.fill((0, 0, 0))
-		for obj in course:
-			obj.draw(display)
+        display.fill((0, 0, 0))
+        for obj in course:
+            obj.draw(display)
 
-		pygame.display.update()
-	rospy.Timer(rospy.Duration(.1), lambda te: update_screen())
-	rospy.spin()
+        pygame.display.update()
+    rospy.Timer(rospy.Duration(.1), lambda te: update_screen())
+    rospy.spin()
 
-	
-	#/Forrest
+    
+    #/Forrest
 main()
-	
-	
-	
-	
-	
-	
-	
-	
+    
+    
+    
+    
+    
+    
+    
+    

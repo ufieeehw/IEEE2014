@@ -1,0 +1,45 @@
+IEEE Hardware Competition - SoutheastCon 2014
+University of Florida IEEE, Machine Intelligence Lab
+
+Rev. Jacob Panikulam
+
+TODO : 
+
+< Vision :
+|
+> Background Elimination
+
+     - Find white lines using adaptive mean threshholding
+     - L_AND the filled block-targeted Canny and the blue filter
+     - Improve vision reliability in poor lighting conditions ( Shallow angle of lighting )
+
+> Rectangle Discovery
+
+     - Re-add canny-contour testing for the rect detection
+     - Add dilation to the filled contours produced by drawSquares()
+     - Add snap-to-line for blocks 
+     - Try doing detection w/ distance varied discrimination  over sections of the image
+     - Add blue-over-line-interruption for block decisions
+
+
+> Post Processing
+
+     X- Add out-of-course removal
+     - Add off-line removal
+     - Improve fault detection and response capabilities in vision
+        - If < 3 blocks detected:
+             - Try other methods
+             X- Rotate
+             - Drive to position 1 and search again
+                -> Drive to position 2, search again
+             + More fault tolerance is overkill
+
+        - If > 3 blocks detected:
+            - FUCK!
+            - Try other methods
+            - Rotate?
+            - Increase rectangle discrimination ( ? Might not help ? )
+            - Tighten color discrimination
+
+: Vision />
+
