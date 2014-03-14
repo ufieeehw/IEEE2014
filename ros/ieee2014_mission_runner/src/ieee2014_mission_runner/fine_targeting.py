@@ -116,11 +116,12 @@ class Template(object):
         for c in xrange(img.shape[2])]
         matchness = product([(yield x) for x in submatchness])
         
-        
-        important = matchness[matchness.shape[0]//4:matchness.shape[0]*3//4, matchness.shape[1]//4:matchness.shape[1]*3//4]
+        miny, maxy = matchness.shape[0]//2 - 30, matchness.shape[0]//2 + 30
+        minx, maxx = matchness.shape[1]//2 - 30, matchness.shape[1]//2 + 30
+        important = matchness[miny:maxy, minx:maxx]
         
         important_pos = numpy.unravel_index(numpy.argmax(important), important.shape)
-        pos = important_pos[0] + matchness.shape[0]//4, important_pos[1] + matchness.shape[1]//4
+        pos = important_pos[0] + miny, important_pos[1] + minx
         
         if True:
             t = int(time.time())
