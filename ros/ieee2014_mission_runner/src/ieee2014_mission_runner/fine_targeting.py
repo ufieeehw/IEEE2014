@@ -8,6 +8,7 @@ import os
 
 import numpy
 import cv2
+from twisted.internet import threads, defer
 
 import roslib
 from tf import transformations
@@ -80,6 +81,8 @@ class Template(object):
         assert template_img_with_alpha.shape[2] == 4
         self._orig = template_img_with_alpha.astype(float)
         
+        return
+        
         opaque = template_img_with_alpha[:, :, 3] >= 128
         opaque3 = numpy.dstack([opaque]*3)
         
@@ -100,10 +103,18 @@ class Template(object):
         
         self._template = res # floating point 3-channel image
     
+    @defer.inlineCallbacks
     def match(self, img, debug_images=False):
         img = img.astype(float)
         assert img.shape == (self._orig.shape[0], self._orig.shape[1], 3)
-        matchness = product(numpy.maximum(0, cross_correlate(img[:,:,c], self._orig[:,:,c], self._orig[:,:,3]/255.)) for c in xrange(img.shape[2]))
+        submatchness = [
+            threads.deferToThread(
+                (lambda c: numpy.maximum(0,
+                    cross_correlate(img[:,:,c], self._orig[:,:,c], self._orig[:,:,3]/255.))),
+                c
+            )
+        for c in xrange(img.shape[2])]
+        matchness = product([(yield x) for x in submatchness])
         
         
         important = matchness[matchness.shape[0]//4:matchness.shape[0]*3//4, matchness.shape[1]//4:matchness.shape[1]*3//4]
@@ -138,7 +149,8 @@ class Template(object):
         cv2.imshow("xy_normalized", normalize(xy))
         cv2.imshow("img_padded", img_padded)'''
         
-        return pos[1] - matchness.shape[1]//2, pos[0] - matchness.shape[0]//2
+        res = pos[1] - matchness.shape[1]//2, pos[0] - matchness.shape[0]//2
+        defer.returnValue(res)
 
 INCH = 0.0254
 

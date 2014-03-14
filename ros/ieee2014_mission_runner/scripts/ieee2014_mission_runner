@@ -130,7 +130,7 @@ def do_fine_targeting(approx_pos, current_angles):
     
     img_msg = yield gun_camera_image_topic.get_next_message()
     img = bridge.imgmsg_to_cv2(img_msg, "bgr8")
-    res = fine_targeting.get(img, approx_pos, P)
+    res = yield fine_targeting.get(img, approx_pos, P)
     print res
     
     delta_pan = -math.asin(res[0]/P[0, 0])
