@@ -223,12 +223,21 @@ def get(img, pos, P, debug_images=False):
     return template.match(img, debug_images)
 
 if __name__ == '__main__':
-    img = cv2.imread(sys.argv[1])
-    pos = +0.32, +0.20
-    P = numpy.array([
-        [462.292755126953, 0, 314.173743238696, 0],
-        [0, 466.827423095703, 184.381978537142, 0],
-        [0, 0, 1, 0],
-    ])
-    
-    print get(img, pos, P, debug_images=True)
+    from twisted.internet import reactor
+    @defer.inlineCallbacks
+    def main():
+        img = cv2.imread(sys.argv[1])
+        pos = +0.32, +0.20
+        pos = -0.326656513595, -0.0530584290467
+        
+        P = numpy.array([
+            [462.292755126953, 0, 314.173743238696, 0],
+            [0, 466.827423095703, 184.381978537142, 0],
+            [0, 0, 1, 0],
+        ])
+        
+        res = yield get(img, pos, P, debug_images=True)
+        print res
+        reactor.stop()
+    reactor.callWhenRunning(main)
+    reactor.run()
