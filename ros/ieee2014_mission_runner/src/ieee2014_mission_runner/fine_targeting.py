@@ -103,7 +103,7 @@ class Template(object):
         
         self._template = res # floating point 3-channel image
     
-    def match(self, img):
+    def match(self, img, debug_images=False):
         img = img.astype(float)
         assert img.shape == (self._orig.shape[0], self._orig.shape[1], 3)
         matchness = product(numpy.maximum(0, cross_correlate(img[:,:,c], self._orig[:,:,c], self._orig[:,:,3]/255.)) for c in xrange(img.shape[2]))
@@ -116,7 +116,6 @@ class Template(object):
         
         if True:
             t = int(time.time())
-            cv2.imwrite('/tmp/%i/%i-matchness.png' % (start_time, t), normalize(matchness))
             moved_template = numpy.roll(numpy.roll(self._orig, pos[0]-self._orig.shape[0]//2, 0), pos[1]-self._orig.shape[1]//2, 1)
             #cv2.imshow('moved_template', moved_template)
             debug_img = img.copy()
@@ -124,7 +123,12 @@ class Template(object):
             debug_img = debug_img//2 + moved_template[:,:,:3]//2
             cv2.imwrite('/tmp/%i/%i-src.png' % (start_time, t), img)
             cv2.imwrite('/tmp/%i/%i-debug.png' % (start_time, t), debug_img)
-            #cv2.waitKey()
+        
+        if debug_images:
+            cv2.imshow('/tmp/%i/%i-matchness.png' % (start_time, t), normalize(matchness))
+            cv2.imshow('/tmp/%i/%i-src.png' % (start_time, t), img.astype(numpy.uint8))
+            cv2.imshow('/tmp/%i/%i-debug.png' % (start_time, t), debug_img.astype(numpy.uint8))
+            cv2.waitKey()
         
         '''for y, row in enumerate(template_src):
             for x, pixel in enumerate(row):
@@ -205,11 +209,11 @@ def get(img, pos, P, debug_images=False):
     if debug_images:
         cv2.imshow('dest', dest)
     
-    return template.match(img)
+    return template.match(img, debug_images)
 
 if __name__ == '__main__':
     img = cv2.imread(sys.argv[1])
-    pos = (0, 0)
+    pos = +0.32, +0.20
     P = numpy.array([
         [462.292755126953, 0, 314.173743238696, 0],
         [0, 466.827423095703, 184.381978537142, 0],
