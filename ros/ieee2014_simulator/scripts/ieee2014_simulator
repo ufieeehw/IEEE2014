@@ -15,6 +15,7 @@ from tf import transformations
 
 from dynamixel_msgs.msg import JointState
 from ieee2014_maestro.srv import ClipPos, ClipPosResponse, FireDart, FireDartResponse
+from xmega_connector.srv import GetColor, GetColorResponse
 
 from ieee2014_simulator.vector import v, V
 
@@ -234,6 +235,12 @@ def main():
         print 'dart fired:', msg.fire
         return FireDartResponse()
     rospy.Service('fire_dart', FireDart, fire_cb)
+    
+    def get_color_cb(msg):
+        clear = 20 if time.time() % 30 >= 15 else 10
+        print clear
+        return GetColorResponse(clear=clear)
+    rospy.Service('xmega_connector/get_color', GetColor, get_color_cb)
     
     course = [
         Line((-course_length/2, +course_width/2), (+course_length/2, +course_width/2)),
