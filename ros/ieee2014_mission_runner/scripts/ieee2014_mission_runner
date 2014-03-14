@@ -122,6 +122,7 @@ from cv_bridge import CvBridge
 bridge = CvBridge()
 @defer.inlineCallbacks
 def do_fine_targeting(approx_pos, current_angles):
+    print 'fine targeting start'
     camera_info = yield gun_camera_info_topic.get_next_message()
     P = numpy.resize(camera_info.P, (3, 4))
     #camera_model = image_geometry.PinholeCameraModel(); camera_model.fromCameraInfo(camera_info)
@@ -140,6 +141,7 @@ def do_fine_targeting(approx_pos, current_angles):
         pan=current_angles['pan'] + delta_pan,
         tilt=current_angles['tilt'] + delta_tilt,
     )
+    print 'fine targeting end'
 
 @defer.inlineCallbacks
 def main():
@@ -230,6 +232,7 @@ def main():
         yield clip_task
         print 'waited', reactor.seconds() - start, 'seconds on block', i
         yield fire_dart(True) # internally waits 1 second
+        print 'done firing'
     yield go_to_point(end_pos)
     yield change_clip_position(4)
 
