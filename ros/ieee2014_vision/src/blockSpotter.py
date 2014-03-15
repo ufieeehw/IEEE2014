@@ -150,17 +150,15 @@ def spotBlocks(img=None, debug=False):
             accept = True
             for ind, other_pos in enumerate(positions):
                 #if (np.sum(np.abs(np.divide(np.subtract(other_pos,relative_position),relative_position))) < 0.2):
-                 if (relative_position[0] - other_pos[0])/relative_position[0] < 0.2:
+                 if (np.abs((relative_position[0] - other_pos[0])/relative_position[0]) < 0.1) and (np.abs((relative_position[1] - other_pos[1])/relative_position[1]) < 0.1):
                     
-                    other_area = areas[ind]
+                    #other_area = areas[ind]
                     
                     #positions[ind] = ( (other_pos[0] + relative_position[0])/2, (other_pos[1] + relative_position[1])/2 )
                     #positions[ind] = ( (other_pos[0] + relative_position[0])/2.0, (other_pos[1] + relative_position[1])/2.0 )
-                    positions[ind] = weighted_pts_avg(other_pos,relative_position,other_area,area)
-                    
-                    
+                    #positions[ind] = weighted_pts_avg(other_pos,relative_position,other_area,area)
                     #Average if close
-                    accept = False
+                    #accept = False
                     break
             if accept == True:    
                 positions.append(relative_position)
