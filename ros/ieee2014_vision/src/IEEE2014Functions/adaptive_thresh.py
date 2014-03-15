@@ -75,7 +75,26 @@ def discover_canny_squares(raw_image, vary_1=1,vary_2=1, vary_3=1):
             horizontals = addmin(discoverHorizontalLines(eliminateBackground(raw_image)))
             cv2.imshow("Canny", horizontals)
 
+        else:
+            pass
 
+def adapt_thresh(image):
+    HSVimage = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
+    blue_lower=np.array([100, 0,0],np.uint8)
+    #blue_lower=np.array([100,th2,th3],np.uint8)
+    blue_upper=np.array([140,255,255],np.uint8)
+    blue=cv2.inRange(HSVimage,blue_lower,blue_upper)
+    #Isolation of low-high blue
+    #Target element: Firing Blocks
+    
+    histeq = lambda input_image: cv2.equaliztHist(input_image)
+    
+    thresh = lambda input_image, C_val: cv2.adaptiveThreshold(input_image,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, makeOdd(194),C_val)
+    h,s,v = cv2.split(HSVimage)
+    
+    limits = (143,28,0)
+    #merged =  cv2.merge(map(thresh,(h,s,v),(th2,th3,th4)))
+    return thresh(v,0)
 
 
 
@@ -88,9 +107,9 @@ if __name__=='__main__':
     path = os.path.dirname(os.path.abspath(__file__))
     path = os.path.abspath(os.path.join(path,".."))
     if len(sys.argv) > 1:
-            pos = sys.argv[1]
+            image_name = sys.argv[1]
     else:
-        pos = 'frame0000'
+        image_name = 'frame0000'
         
     fex = '.jpg'
     if '.' in image_name:
@@ -120,7 +139,7 @@ if __name__=='__main__':
         th5 = cv2.getTrackbarPos('Th5','Frame')
         
 
-         
+        
         blue_lower=np.array([100, 0,0],np.uint8)
         #blue_lower=np.array([100,th2,th3],np.uint8)
         blue_upper=np.array([140,255,255],np.uint8)
@@ -128,10 +147,13 @@ if __name__=='__main__':
         #Isolation of low-high blue
         #Target element: Firing Blocks
         
-        thresh = lambda input_image, C_val: cv2.adaptiveThreshold(input_image,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, makeOdd(th1),C_val)
-        h,s,v = cv2.split(HSVimage)
+        #histeq = lambda input_image: cv2.equaliztHist(input_image)
         
-        merged =  cv2.merge(map(thresh,(h,s,v),(th2,th3,th4)))
+        #thresh = lambda input_image, C_val: cv2.adaptiveThreshold(input_image,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, makeOdd(th1),C_val)
+        #h,s,v = cv2.split(HSVimage)
+        
+        #merged =  cv2.merge(map(thresh,(h,s,v),(th2,th3,th4)))
+        merged = adapt_thresh(image)
         cv2.imshow("Merged", merged)
         
 

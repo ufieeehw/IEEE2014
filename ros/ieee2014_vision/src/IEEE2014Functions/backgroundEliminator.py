@@ -171,12 +171,15 @@ if __name__=='__main__':
     path = os.path.dirname(os.path.abspath(__file__))
     path = os.path.abspath(os.path.join(path,".."))
     if len(sys.argv) > 1:
-            pos = sys.argv[1]
+        image_name = sys.argv[1]
     else:
-            pos = 'frame0000'
+        image_name = 'frame0000'
 
-    input= cv2.imread(path + '/Debug/' + pos + '.jpg')
-    image = cv2.GaussianBlur(input, (7, 7), sigmaX = 1, sigmaY = 1)
+    fex = '.jpg'
+    if '.' in image_name:
+        fex = ''
+    img = cv2.imread(path + '/Debug/' + image_name + fex)
+    image = cv2.GaussianBlur(img, (7, 7), sigmaX = 1, sigmaY = 1)
 
     cv2.namedWindow('Frame')
     
@@ -199,6 +202,8 @@ if __name__=='__main__':
         
 
         bkelim = eliminateBackground_2(image, th1,th2)
+
+
         print "USING ELIMINATE BACKGROUND _ 2"
         blue = bkelim[:,:,0]
         wht = bkelim[:,:,1]

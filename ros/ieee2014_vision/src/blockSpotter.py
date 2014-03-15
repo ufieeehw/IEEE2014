@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import os
+
 #import sys
 #import traceback
 #sys.path.insert(0,"./IEEE2014Functions")
@@ -45,6 +46,11 @@ try:
 except:
     #traceback.print_exc(file=sys.stdout)
     print "Background Elimination Import Failed in blockSpotter"
+try:
+    from IEEE2014Functions import adaptive_thresh
+except:
+    print "Import of adaptive_thresh failed"
+    
 def nothing(x):
     pass
 
@@ -72,10 +78,9 @@ def spotBlocks(img=None, debug=False):
     #Discrimination by area is not reliable on the far lower bound
 
     img = cv2.GaussianBlur(img, (7, 7), sigmaX = 1, sigmaY = 1)
-    bkelim = be.eliminateBackground(img)
-
-
-    blue = np.array(bkelim[:,:,0],np.uint8)
+    #bkelim = be.eliminateBackground_2(img)
+    #blue = np.array(bkelim[:,:,0],np.uint8)
+    blue = np.array(adaptive_thresh.adapt_thresh(img),np.uint8)
     #dbg
     dispimg, outContours = be.discoverSquares(blue,200,1)
     
@@ -134,7 +139,7 @@ def spotBlocks(img=None, debug=False):
             relative_position = (distanceHoriz*0.0254,relativeX*0.0254)
             accept = True
             for ind, other_pos in enumerate(positions):
-                if (np.sum(np.abs(np.divide(np.subtract(other_pos,relative_position),relative_position))) < 0.1):
+                if (np.sum(np.abs(np.divide(np.subtract(other_pos,relative_position),relative_position))) < 0.2):
                     
                     positions[ind] = ( (other_pos[0] + relative_position[0])/2, (other_pos[1] + relative_position[1])/2 )
                     #Average if close

@@ -180,8 +180,8 @@ class blockHandler:
 
             if ((absolutePos[0] < 0.62 + self.course_length/2) and (np.abs(absolutePos[1]) < self.course_width/2)):
             
-                send_pos = post_cleanup.find_best_fit(absolutePos)
-                #send_pos = absolutePos
+                #send_pos = post_cleanup.find_best_fit(absolutePos)
+                send_pos = absolutePos
                 
                 absPos = Pose2D()
                 absPos.x = send_pos[0]
