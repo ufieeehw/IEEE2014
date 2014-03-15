@@ -87,13 +87,13 @@ def cross_correlate(signal, template, template_weight):
         _cross_correlate(signal_padded, template_weight_padded)
     
     x = numpy.sqrt(_cross_correlate(signal_padded**2, template_weight_padded))
-    cv2.imshow('signal', normalize(signal))
-    cv2.imshow('template', normalize(template))
-    cv2.imshow('template_weight', normalize(template_weight))
-    cv2.imshow("a", normalize(cross_correlation))
-    cv2.imshow("b", normalize(x))
-    cv2.imshow("c", normalize(cross_correlation/x))
-    cv2.waitKey()
+    #cv2.imshow('signal', normalize(signal))
+    #cv2.imshow('template', normalize(template))
+    #cv2.imshow('template_weight', normalize(template_weight))
+    #cv2.imshow("a", normalize(cross_correlation))
+    #cv2.imshow("b", normalize(x))
+    #cv2.imshow("c", normalize(cross_correlation/x))
+    #cv2.waitKey()
     
     tmp = cross_correlation / numpy.sqrt(_cross_correlate(signal_padded**2, template_weight_padded))
     res = tmp / math.sqrt(numpy.sum(template_weight_padded*template_padded**2))
@@ -139,7 +139,7 @@ class Template(object):
     def match(self, img, debug_images=False):
         img = img.astype(float)
         assert img.shape == (self._orig.shape[0], self._orig.shape[1], 3)
-        if False:
+        if True:
             submatchness = [
                 threads.deferToThread(
                     (lambda c: numpy.maximum(0,
@@ -283,7 +283,12 @@ if __name__ == '__main__':
             [0, 0, 1, 0],
         ])
         
-        res = yield get(img, pos, P, debug_images=True)
+        start = reactor.seconds()
+        res = yield get(img, pos, P, debug_images=False)
+        end = reactor.seconds()
+        
+        print end - start
+        
         print res
         reactor.stop()
     reactor.callWhenRunning(main)
