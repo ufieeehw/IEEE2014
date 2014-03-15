@@ -233,7 +233,7 @@ def main():
     block_positions = sorted(block_positions, key=lambda (x, y): x)
     
     clip = lambda a, (l, r): l if a < l else r if a > r else a
-    block_positions = [(x, clip(y, (-course_width+11*INCH, course_width/2-6*INCH))) for x, y in block_positions]
+    block_positions = [(x, clip(y-.04, (-course_width+11*INCH, course_width/2-6*INCH))) for x, y in block_positions]
     
     # snap blocks to allowed regions of lines
     block_positions[0] = -course_length/2+35.25*INCH, block_positions[0][1]
