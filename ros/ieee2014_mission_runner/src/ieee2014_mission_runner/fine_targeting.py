@@ -205,6 +205,9 @@ def draw_target(r):
 camera_height = 0.15334 + 0.08067
 
 def get(img, pos, P, debug_images=False):
+    with open(os.path.join(store_path, '%i-pos.txt' % (int(time.time()),)), 'wb') as f:
+        f.write(repr(pos))
+    
     pos = numpy.array([pos[0], pos[1], camera_height])
     
     dest = render.make_dest(width=img.shape[1], height=img.shape[0])
@@ -226,8 +229,8 @@ if __name__ == '__main__':
     @defer.inlineCallbacks
     def main():
         img = cv2.imread(sys.argv[1])
-        pos = +0.32, +0.20
-        pos = -0.326656513595, -0.0530584290467
+        pos = +0.30, -0.30
+        #pos = -0.326656513595, -0.0530584290467
         
         P = numpy.array([
             [462.292755126953, 0, 314.173743238696, 0],
