@@ -22,6 +22,7 @@ import sys
 
 import ieee2014_mission_runner
 from ieee2014_mission_runner import coarse_targeting, fine_targeting, util
+from ieee2014_simulator.scene import course_length, course_width, INCH
 
 from ieee2014_vision.srv import Detect_Blocks
 from ieee2014_vision.msg import BlockPositions
@@ -223,6 +224,19 @@ def main():
         ]
     
     block_positions = sorted(block_positions, key=lambda (x, y): x)
+    
+    clip = lambda a, (l, r): l if a < l else r if a > r else a
+    block_positions = [(x, clip(y, (-course_width+11*INCH, course_width/2-6*INCH))) for x, y in block_positions]
+    
+    # snap blocks to allowed regions of lines
+    block_positions[0] = -course_length/2+35.25*INCH, block_positions[0][1]
+    
+    center = -course_length/2, 0
+    radius = 48*INCH
+    angle = math.atan2(block_positions[1][1]-center[1], block_positions[1][0]-center[0])
+    block_positions[1] = radius*math.cos(angle)+center[0], radius*math.sin(angle)+center[1]
+    
+    block_positions[2] = -course_length/2+57.75*INCH, block_positions[2][1]
     
     for i, block_position in enumerate(block_positions):
         coarse_angles = coarse_targeting.think(block_position)
