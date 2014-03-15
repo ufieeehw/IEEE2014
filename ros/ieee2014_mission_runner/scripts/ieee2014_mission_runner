@@ -3,6 +3,7 @@
 import math
 import itertools
 import time
+import os
 
 import numpy
 from twisted.internet import reactor, defer, threads
@@ -198,7 +199,7 @@ def main():
     img_msg = yield gun_camera_image_topic.get_next_message()
     img = bridge.imgmsg_to_cv2(img_msg, "bgr8")
     t = int(time.time())
-    cv2.imwrite('/tmp/blocks-%i.png' % (t,), img)
+    cv2.imwrite(os.path.join(os.path.expanduser('~'), 'blocks-%i.png' % (t,)), img)
     
     # look for blocks, fill in block_positions
     

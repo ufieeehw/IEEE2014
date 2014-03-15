@@ -15,10 +15,9 @@ from tf import transformations
 
 from ieee2014_mission_runner import render
 
-start_time = int(time.time())
-print '/tmp/%i' % (start_time,)
+store_path = os.path.join(os.path.expanduser('~'), str(int(time.time())))
 try:
-    os.mkdir('/tmp/%i' % (start_time,))
+    os.mkdir(store_path)
 except:
     pass
 
@@ -130,14 +129,14 @@ class Template(object):
             debug_img = img.copy()
             debug_img[pos[0]-3:pos[0]+3, pos[1]-3:pos[1]+3] = 0, 0, 0
             debug_img = debug_img//2 + moved_template[:,:,:3]//2
-            cv2.imwrite('/tmp/%i/%i-src.png' % (start_time, t), img)
-            cv2.imwrite('/tmp/%i/%i-debug.png' % (start_time, t), debug_img)
-            cv2.imwrite('/tmp/%i/%i-matchness.png' % (start_time, t), normalize(matchness))
+            cv2.imwrite(os.path.join(store_path, '%i-src.png' % (t,)), img)
+            cv2.imwrite(os.path.join(store_path, '%i-debug.png' % (t,)), debug_img)
+            cv2.imwrite(os.path.join(store_path, '%i-matchness.png' % (t,)), normalize(matchness))
         
         if debug_images:
-            cv2.imshow('/tmp/%i/%i-matchness.png' % (start_time, t), normalize(matchness))
-            cv2.imshow('/tmp/%i/%i-src.png' % (start_time, t), img.astype(numpy.uint8))
-            cv2.imshow('/tmp/%i/%i-debug.png' % (start_time, t), debug_img.astype(numpy.uint8))
+            cv2.imshow('matchness', normalize(matchness))
+            cv2.imshow('src', img.astype(numpy.uint8))
+            cv2.imshow('debug', debug_img.astype(numpy.uint8))
             cv2.waitKey()
         
         '''for y, row in enumerate(template_src):
