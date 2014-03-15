@@ -58,7 +58,7 @@ class blockHandler:
         ##Begin publisher and subscribers
         
         self.sim = rospy.get_param('/block_publisher/sim', "N")
-        self.publish_images = rospy.get_param('/block_publisher/debug', "N")
+        self.publish_images = rospy.get_param('/block_publisher/debug', "Y")
         self.enable = True #Default state
         self.enable_service = rospy.Service('Detect_Blocks',Detect_Blocks, self.detect_enable)
 
