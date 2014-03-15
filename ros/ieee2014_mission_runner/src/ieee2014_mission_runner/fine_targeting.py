@@ -51,16 +51,49 @@ def cross_correlate(signal, template, template_weight):
     # at every possible alignment of signal and template:
     # correlation = sum(signal*template*template_weight)
     
-    signal_padded = pad(signal - numpy.mean(signal))
-    template_padded = roll_up_left_a_quarter(pad(template - numpy.mean(template_weight*template)))
+    signal_padded = pad(signal)
+    template_padded = roll_up_left_a_quarter(pad(template - numpy.sum(template_weight*template)/numpy.sum(template_weight)))
     template_weight_padded = roll_up_left_a_quarter(pad(template_weight))
     
-    cross_correlation = _cross_correlate(signal_padded, template_weight_padded*template_padded)
+    #_cross_correlate(signal_padded, template_weight_padded*template_padded) + X
     
-    #cv2.imshow('templ', normalize(template_weight))
-    #cv2.imshow("a", normalize(cross_correlation))
-    #cv2.imshow("b", normalize(_cross_correlate(signal_padded**2, template_weight_padded)))
-    #cv2.waitKey()
+    #X = _cross_correlate(signal, template_weight)
+    
+    #numpy.sum(a * R{b})
+    #S{_cross_correlate(a, b)}
+    
+    # for every roll amount, want:
+    #numpy.sum((signal - numpy.sum(R{template_weight} * signal)/numpy.sum(template_weight))*R{template_weight*template})
+    #numpy.sum(signal*R{template_weight*template} - numpy.sum(R{template_weight} * signal)*R{template_weight*template}/numpy.sum(template_weight))
+    #numpy.sum(signal*R{template_weight*template}) - numpy.sum(numpy.sum(R{template_weight} * signal)*R{template_weight*template}/numpy.sum(template_weight))
+    #S{_cross_correlate(signal, template_weight*template)} - numpy.sum(numpy.sum(R{template_weight} * signal)*R{template_weight*template}/numpy.sum(template_weight)) # different path here, possibly - break inner numpy.sum out
+    #S{_cross_correlate(signal, template_weight*template)} - numpy.sum(R{template_weight} * signal)*numpy.sum(R{template_weight*template})/numpy.sum(template_weight)
+    #S{_cross_correlate(signal, template_weight*template)} - numpy.sum(signal * R{template_weight})*numpy.sum(template_weight*template)/numpy.sum(template_weight)
+    #S{_cross_correlate(signal, template_weight*template)} - S{X}*numpy.sum(template_weight*template)/numpy.sum(template_weight)
+    
+    
+    
+    # old
+    #signal*R{template_weight*template} - numpy.sum(R{template_weight} * signal)/numpy.sum(template_weight)*R{template_weight*template}
+    #S{_cross_correlate(signal, template_weight*template)} - numpy.sum(R{template_weight} * signal)/numpy.sum(template_weight)*R{template_weight*template}
+    #S{_cross_correlate(signal, template_weight*template)} - S{X}*R{template_weight*template} /numpy.sum(template_weight)
+    
+    #cross_correlation = _cross_correlate(signal_padded, template_weight_padded*template_padded)
+    #cross_correlation = cross_correlation - \
+    #    numpy.sum(template_weight_padded*template_padded) * \
+    #    _cross_correlate(signal_padded, template_weight_padded)
+    cross_correlation = _cross_correlate(signal_padded, template_weight_padded*template_padded) - \
+        numpy.sum(template_weight_padded*template_padded)/numpy.sum(template_weight_padded) * \
+        _cross_correlate(signal_padded, template_weight_padded)
+    
+    x = numpy.sqrt(_cross_correlate(signal_padded**2, template_weight_padded))
+    cv2.imshow('signal', normalize(signal))
+    cv2.imshow('template', normalize(template))
+    cv2.imshow('template_weight', normalize(template_weight))
+    cv2.imshow("a", normalize(cross_correlation))
+    cv2.imshow("b", normalize(x))
+    cv2.imshow("c", normalize(cross_correlation/x))
+    cv2.waitKey()
     
     tmp = cross_correlation / numpy.sqrt(_cross_correlate(signal_padded**2, template_weight_padded))
     res = tmp / math.sqrt(numpy.sum(template_weight_padded*template_padded**2))
@@ -106,21 +139,29 @@ class Template(object):
     def match(self, img, debug_images=False):
         img = img.astype(float)
         assert img.shape == (self._orig.shape[0], self._orig.shape[1], 3)
-        submatchness = [
-            threads.deferToThread(
-                (lambda c: numpy.maximum(0,
-                    cross_correlate(img[:,:,c], self._orig[:,:,c], self._orig[:,:,3]/255.))),
-                c
-            )
-        for c in xrange(img.shape[2])]
-        matchness = product([(yield x) for x in submatchness])
+        if False:
+            submatchness = [
+                threads.deferToThread(
+                    (lambda c: numpy.maximum(0,
+                        cross_correlate(img[:,:,c], self._orig[:,:,c], self._orig[:,:,3]/255.))),
+                    c
+                )
+            for c in xrange(img.shape[2])]
+            matchness = product([(yield x) for x in submatchness])
+        else:
+            #matchness = reduce(numpy.minimum, [
+            #    cross_correlate(img[:,:,c], self._orig[:,:,c], self._orig[:,:,3]/255.)
+            #for c in xrange(img.shape[2])])
+            matchness = product(
+                cross_correlate(img[:,:,c], self._orig[:,:,c], self._orig[:,:,3]/255.)
+            for c in xrange(img.shape[2]))
         
-        miny, maxy = matchness.shape[0]//2 - 30, matchness.shape[0]//2 + 30
-        minx, maxx = matchness.shape[1]//2 - 30, matchness.shape[1]//2 + 30
-        important = matchness[miny:maxy, minx:maxx]
+        #miny, maxy = matchness.shape[0]//2 - 30, matchness.shape[0]//2 + 30
+        #minx, maxx = matchness.shape[1]//2 - 30, matchness.shape[1]//2 + 30
+        #important = matchness[miny:maxy, minx:maxx]
         
-        important_pos = numpy.unravel_index(numpy.argmax(important), important.shape)
-        pos = important_pos[0] + miny, important_pos[1] + minx
+        pos = numpy.unravel_index(numpy.argmax(matchness), matchness.shape)
+        #pos = important_pos[0] + miny, important_pos[1] + minx
         
         if True:
             t = int(time.time())
@@ -137,7 +178,8 @@ class Template(object):
             cv2.imshow('matchness', normalize(matchness))
             cv2.imshow('src', img.astype(numpy.uint8))
             cv2.imshow('debug', debug_img.astype(numpy.uint8))
-            cv2.waitKey()
+            while True:
+                cv2.waitKey()
         
         '''for y, row in enumerate(template_src):
             for x, pixel in enumerate(row):
