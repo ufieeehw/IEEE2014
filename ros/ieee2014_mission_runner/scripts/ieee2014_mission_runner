@@ -276,7 +276,7 @@ def main():
     
     print 'run took', run_end - run_start
     
-    yield sleep(30)
+    yield util.sleep(30)
     
     os.system('sudo poweroff')
 
