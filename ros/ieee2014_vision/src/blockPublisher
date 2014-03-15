@@ -119,6 +119,12 @@ class blockHandler:
     def start_detection(self, data):
         if self.enable == False:
             print "Vision Not Active"
+            try:
+                image = np.array(self.bridge.imgmsg_to_cv(data,"bgr8"))
+                cv2.imwrite("Debug image", image)
+                #cv2.imwrite(filename, img[, params])
+            except:
+                print "Log write failed"
             rospy.sleep(0.5)
             return
         if self.current_pos is None:
@@ -178,7 +184,7 @@ class blockHandler:
             #absolutePos = (cameraPos[0] + xOffset, cameraPos[1] + yOffset)
             absolutePos = (robotPos[0] + xOffset, robotPos[1] + yOffset)
 
-            if ((absolutePos[0] < 0.62 + self.course_length/2) and (np.abs(absolutePos[1]) < self.course_width/2)):
+            if ((absolutePos[0] < 0.62 + self.course_length/2) and (np.abs(absolutePos[1]) < self.course_width/2) and (absolutePos[0] > (-course_length/2)+0.2)):
             
                 #send_pos = post_cleanup.find_best_fit(absolutePos)
                 send_pos = absolutePos

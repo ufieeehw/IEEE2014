@@ -54,6 +54,15 @@ except:
 def nothing(x):
     pass
 
+def weighted_pts_avg(pt1,pt2,wt1,wt2):
+    
+    avgx = (wt1*pt1[0] + wt2*pt2[0])/(wt1+wt2)
+    avgy = (wt1*pt1[1] + wt2*pt2[1])/(wt1+wt2)
+    
+    return (avgx,avgy)
+    
+    
+
 def spotBlocks(img=None, debug=False):
     #Dear everyone:
     #Everything is in inches because I couldn't find a metric ruler.
@@ -108,7 +117,7 @@ def spotBlocks(img=None, debug=False):
 
                 #cv2.drawContours(F,[ctr], -1,  (220,150,0))
                 #cv2.circle(F,(cx,cy), int(area/100), (0,0,255), thickness=-1)
-                centerofMass.append((cx,cy))
+                centerofMass.append(((cx,cy),area))
                 #Need to control for 'rectangleness' - OR: remove non-course background
 
     #dispimg = cv2.pyrUp(cv2.pyrUp(cleanedImage))
@@ -118,7 +127,8 @@ def spotBlocks(img=None, debug=False):
     
     positions = []
     goodComs = []
-    for com in centerofMass:
+    areas = []
+    for com,area in centerofMass:
         cxy = np.array([com[0],com[1]],np.float32)
         imxy = (center - cxy)/center
         xim = imxy[0]
@@ -139,14 +149,22 @@ def spotBlocks(img=None, debug=False):
             relative_position = (distanceHoriz*0.0254,relativeX*0.0254)
             accept = True
             for ind, other_pos in enumerate(positions):
-                if (np.sum(np.abs(np.divide(np.subtract(other_pos,relative_position),relative_position))) < 0.2):
+                #if (np.sum(np.abs(np.divide(np.subtract(other_pos,relative_position),relative_position))) < 0.2):
+                 if (relative_position[0] - other_pos[0])/relative_position[0] < 0.2:
                     
-                    positions[ind] = ( (other_pos[0] + relative_position[0])/2, (other_pos[1] + relative_position[1])/2 )
+                    other_area = areas[ind]
+                    
+                    #positions[ind] = ( (other_pos[0] + relative_position[0])/2, (other_pos[1] + relative_position[1])/2 )
+                    #positions[ind] = ( (other_pos[0] + relative_position[0])/2.0, (other_pos[1] + relative_position[1])/2.0 )
+                    positions[ind] = weighted_pts_avg(other_pos,relative_position,other_area,area)
+                    
+                    
                     #Average if close
                     accept = False
                     break
             if accept == True:    
                 positions.append(relative_position)
+                areas.append(area)
                 goodComs.append(com)
 
 
