@@ -123,8 +123,8 @@ def spotBlocks(img=None, debug=False):
             #The numbers are correction factors because my focal length is off in x and y
             
             #Original: 1.13,1.7
-            
-            distanceHoriz = -cameraHeight*(focal/yim)/1.31 #Forward +, NO REAR LOL ITS A CAMERA
+            #1.31 mul for distance_Horiz worked well
+            distanceHoriz = -cameraHeight*(focal/yim)/1.29 #Forward +, NO REAR LOL ITS A CAMERA
             relativeX = ((distanceHoriz*xim)/focal)*1.7 #Left +; Right -
             
             
