@@ -179,7 +179,7 @@ class blockHandler:
             #absolutePos = (cameraPos[0] + xOffset, cameraPos[1] + yOffset)
             absolutePos = (robotPos[0] + xOffset, robotPos[1] + yOffset)
 
-            if ((np.abs(absolutePos[0]) < self.course_length/2) and (np.abs(absolutePos[1]) < self.course_width/2))):
+            if ((np.abs(absolutePos[0]) < self.course_length/2) and (np.abs(absolutePos[1]) < self.course_width/2)):
             
                 #send_pos = post_cleanup.find_best_fit(absolutePos)
                 send_pos = absolutePos
