@@ -227,7 +227,7 @@ def main():
     for i, block_position in enumerate(block_positions):
         coarse_angles = coarse_targeting.think(block_position)
         coarse_target_task = set_pan_tilt(**coarse_angles)
-        yield turn_and_go(block_position)
+        yield go_to_point(block_position)
         
         # let particle filter reconverge then recenter
         yield util.sleep(2)
