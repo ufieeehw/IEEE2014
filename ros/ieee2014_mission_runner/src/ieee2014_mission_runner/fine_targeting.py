@@ -35,17 +35,19 @@ def pad(x):
     #    0, x.shape[0],
     #    0, x.shape[1],
     #    cv2.BORDER_CONSTANT, value=(0, 0, 0))
+    return x
+    
     res = numpy.zeros((2*x.shape[0], 2*x.shape[1]))
     res[:x.shape[0], :x.shape[1]] = x
     return res
 
 def roll_up_left_a_quarter(x):
-    return numpy.roll(numpy.roll(x, -x.shape[1]//4, 1), -x.shape[0]//4, 0)
+    return numpy.roll(numpy.roll(x, -x.shape[1]//2, 1), -x.shape[0]//2, 0)
 
 def _cross_correlate(signal, template):
     return numpy.fft.irfft2(
         numpy.fft.rfft2(signal) * numpy.fft.rfft2(template).conj()
-    )[:signal.shape[0]//2, :signal.shape[1]//2].real
+    ).real
 
 def cross_correlate(signal, template, template_weight):
     # at every possible alignment of signal and template:
@@ -156,7 +158,7 @@ class Template(object):
                 numpy.maximum(0, cross_correlate(img[:,:,c], self._orig[:,:,c], self._orig[:,:,3]/255.))
             for c in xrange(img.shape[2]))
         
-        window = 100
+        window = 90
         
         miny, maxy = matchness.shape[0]//2 - window, matchness.shape[0]//2 + window
         minx, maxx = matchness.shape[1]//2 - window, matchness.shape[1]//2 + window
