@@ -153,15 +153,17 @@ class Template(object):
             #    cross_correlate(img[:,:,c], self._orig[:,:,c], self._orig[:,:,3]/255.)
             #for c in xrange(img.shape[2])])
             matchness = product(
-                cross_correlate(img[:,:,c], self._orig[:,:,c], self._orig[:,:,3]/255.)
+                numpy.maximum(0, cross_correlate(img[:,:,c], self._orig[:,:,c], self._orig[:,:,3]/255.))
             for c in xrange(img.shape[2]))
         
-        #miny, maxy = matchness.shape[0]//2 - 30, matchness.shape[0]//2 + 30
-        #minx, maxx = matchness.shape[1]//2 - 30, matchness.shape[1]//2 + 30
-        #important = matchness[miny:maxy, minx:maxx]
+        window = 100
         
-        pos = numpy.unravel_index(numpy.argmax(matchness), matchness.shape)
-        #pos = important_pos[0] + miny, important_pos[1] + minx
+        miny, maxy = matchness.shape[0]//2 - window, matchness.shape[0]//2 + window
+        minx, maxx = matchness.shape[1]//2 - window, matchness.shape[1]//2 + window
+        important = matchness[miny:maxy, minx:maxx]
+        
+        important_pos = numpy.unravel_index(numpy.argmax(important), important.shape)
+        pos = important_pos[0] + miny, important_pos[1] + minx
         
         if True:
             t = int(time.time())
@@ -175,7 +177,8 @@ class Template(object):
             cv2.imwrite(os.path.join(store_path, '%i-matchness.png' % (t,)), normalize(matchness))
         
         if debug_images:
-            cv2.imshow('matchness', normalize(matchness))
+            cv2.imshow('important', important)
+            cv2.imshow('matchness', matchness)
             cv2.imshow('src', img.astype(numpy.uint8))
             cv2.imshow('debug', debug_img.astype(numpy.uint8))
             while True:
