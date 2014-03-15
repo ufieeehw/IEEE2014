@@ -43,9 +43,11 @@ class blockHandler:
         rospy.init_node('block_publisher')
         self.course_length = (97 - 3/4 * 2) * 0.0254 #Courtesy of Lord Voight
         self.course_width = (49 - 3/4 * 2) * 0.0254
-        self.cameraFwd = 5.25 * 0.0254 #Cam v2 (not precise)
+        self.cameraFwd = 5.5 * 0.0254 #Cam v2 (not precise)
         self.cameraLeft = 0
-        self.start_pos = (-self.course_length/2 + (6*0.0254), -self.course_width/2 + ((5+5.25+0.75)*0.0254))    
+        #self.start_pos = (-self.course_length/2 + (6*0.0254), -self.course_width/2 + ((5+5.25+0.75)*0.0254))    
+        self.start_pos = (-1.07910937484,-0.337750306853)
+
         #self.current_pos = self.start_pose
         self.current_pos = None
         self.rpy = (0,0,0)
@@ -179,7 +181,7 @@ class blockHandler:
             if ((absolutePos[0] < 0.62 + self.course_length/2) and (np.abs(absolutePos[1]) < self.course_width/2)):
             
                 send_pos = post_cleanup.find_best_fit(absolutePos)
-                
+                #send_pos = absolutePos
                 
                 absPos = Pose2D()
                 absPos.x = send_pos[0]

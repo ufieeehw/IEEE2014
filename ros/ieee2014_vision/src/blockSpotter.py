@@ -60,7 +60,7 @@ def spotBlocks(img=None, debug=False):
 
         #cv2.imshow('image',img)
     #Notable parameters
-    cameraHeight = 8.25 #inches (Gun v2)
+    cameraHeight = 8.158 #inches (Gun v2) #original: 8.25
     focal = 2.54 #in/in
     
     #Camera specs claim 5mm or 28mm
@@ -124,7 +124,7 @@ def spotBlocks(img=None, debug=False):
             
             #Original: 1.13,1.7
             
-            distanceHoriz = -cameraHeight*(focal/yim)/1.17 #Forward +, NO REAR LOL ITS A CAMERA
+            distanceHoriz = -cameraHeight*(focal/yim)/1.31 #Forward +, NO REAR LOL ITS A CAMERA
             relativeX = ((distanceHoriz*xim)/focal)*1.7 #Left +; Right -
             
             

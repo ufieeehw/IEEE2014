@@ -27,7 +27,6 @@ def find_best_fit((x,y)):
         get_arc_point(y, 49*INCH),
         57.75*INCH,
     ))
-    print line_x_coordinates
     diffs = np.abs(np.subtract(x,line_x_coordinates))
 
     least_diff,idx = min((val,idx) for (idx, val) in enumerate(diffs))
