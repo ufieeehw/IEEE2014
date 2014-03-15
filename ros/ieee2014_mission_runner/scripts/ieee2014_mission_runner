@@ -275,6 +275,10 @@ def main():
     yield change_clip_position(4)
     
     print 'run took', run_end - run_start
+    
+    yield sleep(30)
+    
+    os.system('sudo poweroff')
 
 @defer.inlineCallbacks
 def main2():
