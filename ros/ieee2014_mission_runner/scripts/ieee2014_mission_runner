@@ -154,6 +154,8 @@ def do_fine_targeting(approx_pos, current_angles):
 def main():
     yield set_pan_tilt(0.3, 0.0)
     
+    detect_blocks(True)
+    
     @defer.inlineCallbacks
     def signalStarted():
         yield change_clip_position(1)
@@ -209,11 +211,10 @@ def main():
     # look for blocks, fill in block_positions
     
     if True:
-        detect_blocks(True)
         pan = 0.3
         for attempt in itertools.count():
             block_positions = unpack_blocks((yield block_topic.get_next_message()))
-            if len(block_positions) == 3 and attempt >= 10:
+            if len(block_positions) == 3:
                 break
             print "Not enough blocks detected"
             if attempt % 25 == 24:
