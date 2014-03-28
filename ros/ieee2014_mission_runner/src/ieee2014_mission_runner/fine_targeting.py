@@ -88,7 +88,7 @@ def cross_correlate(signal, template, template_weight):
         numpy.sum(template_weight_padded*template_padded)/numpy.sum(template_weight_padded) * \
         _cross_correlate(signal_padded, template_weight_padded)
     
-    x = numpy.sqrt(_cross_correlate(signal_padded**2, template_weight_padded))
+    #x = numpy.sqrt(_cross_correlate(signal_padded**2, template_weight_padded))
     #cv2.imshow('signal', normalize(signal))
     #cv2.imshow('template', normalize(template))
     #cv2.imshow('template_weight', normalize(template_weight))
@@ -97,8 +97,21 @@ def cross_correlate(signal, template, template_weight):
     #cv2.imshow("c", normalize(cross_correlation/x))
     #cv2.waitKey()
     
-    tmp = cross_correlation / numpy.sqrt(_cross_correlate(signal_padded**2, template_weight_padded))
-    res = tmp / math.sqrt(numpy.sum(template_weight_padded*template_padded**2))
+    tmp = cross_correlation / numpy.sqrt(
+        _cross_correlate(signal_padded**2, template_weight_padded)/numpy.sum(template_weight_padded) -
+        (_cross_correlate(signal_padded, template_weight_padded)/numpy.sum(template_weight_padded))**2
+    )
+    print 'qq', numpy.sqrt(
+        _cross_correlate(signal_padded**2, template_weight_padded)/numpy.sum(template_weight_padded) -
+        (_cross_correlate(signal_padded, template_weight_padded)/numpy.sum(template_weight_padded))**2
+    )
+    template_normalized = template_padded - numpy.sum(template_weight_padded*template_padded)/numpy.sum(template_weight_padded)
+    #print 'xx', template_normalized
+    #res = tmp / math.sqrt(numpy.sum(template_weight_padded*template_padded**2))
+    res = tmp / math.sqrt(numpy.sum(template_weight_padded*template_normalized**2) /
+        numpy.sum(template_weight_padded))
+    
+    res = res / numpy.sum(template_weight_padded)
     
     print numpy.min(res), numpy.max(res)
     
@@ -180,7 +193,7 @@ class Template(object):
         
         if debug_images:
             cv2.imshow('important', important)
-            cv2.imshow('matchness', matchness)
+            cv2.imshow('matchness', normalize(matchness))
             cv2.imshow('src', img.astype(numpy.uint8))
             cv2.imshow('debug', debug_img.astype(numpy.uint8))
             while True:
@@ -272,11 +285,38 @@ def get(img, pos, P, debug_images=False):
     return template.match(img, debug_images)
 
 if __name__ == '__main__':
+    #'''
+    signal = numpy.zeros((8, 8)) + 0.001*numpy.random.randn(8, 8)
+    signal[3:6, 3:6] = [[1,2,3],[6,5,4],[7,8,9]]
+    
+    template = numpy.zeros((8, 8))
+    template[3:6, 3:6] = [[1,2,3],[6,5,4],[7,8,9]]
+    template_weight = numpy.zeros((8, 8))
+    template_weight[3:6, 3:6] = 1
+    
+    for row in signal:
+        for col in row:
+            print '%+0.3f' % (col,),
+        print
+    
+    print template
+    print template_weight
+    
+    res = cross_correlate(signal, template, template_weight)
+    
+    for row in res:
+        for col in row:
+            print '%+0.3f' % (col,),
+        print
+    
+    sys.exit()
+    #'''
+    
     from twisted.internet import reactor
     @defer.inlineCallbacks
     def main():
         img = cv2.imread(sys.argv[1])
-        pos = +0.30, -0.30
+        pos = +0.10, 0
         #pos = -0.326656513595, -0.0530584290467
         
         P = numpy.array([
@@ -286,7 +326,7 @@ if __name__ == '__main__':
         ])
         
         start = reactor.seconds()
-        res = yield get(img, pos, P, debug_images=False)
+        res = yield get(img, pos, P, debug_images=True)
         end = reactor.seconds()
         
         print end - start

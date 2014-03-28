@@ -200,12 +200,12 @@ if __name__ == '__main__':
     else:
         image_name = 'frame0000'
 
-    fex = '.jpg'
+    fex = '.png'
     if '.' in image_name:
         fex = ''
     
     
-    img = cv2.imread(path + '/Debug/' + image_name + fex)
+    img = cv2.imread(sys.argv[1])
 
     #img= cv2.imread(path + '/Debug/' + pos + '.jpg')
     #cropped = img[img.shape[0]*0.45:img.shape[0],:]
@@ -219,7 +219,7 @@ if __name__ == '__main__':
                 
         cleanedImage = cv2.GaussianBlur(cropped, (3,3), sigmaX = 1, sigmaY = 1)
         positions,com = spotBlocks(cropped)
-        #print positions
+        print positions
         for k in range(len(positions)):
             cm = com[k]
             pos = positions[k]
