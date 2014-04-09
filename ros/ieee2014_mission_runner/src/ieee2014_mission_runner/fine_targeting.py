@@ -65,7 +65,7 @@ def cross_correlate(signal, template, template_weight):
     #S{_cross_correlate(a, b)}
     
     # for every roll amount, want:
-    #numpy.sum((signal - numpy.sum(R{template_weight} * signal)/numpy.sum(template_weight))*R{template_weight*template})
+    #numpy.sum((signal - numpy.sum(R{template_weight} * signal)/numpy.sum(template_weight)) * R{template_weight*template})
     #numpy.sum(signal*R{template_weight*template} - numpy.sum(R{template_weight} * signal)*R{template_weight*template}/numpy.sum(template_weight))
     #numpy.sum(signal*R{template_weight*template}) - numpy.sum(numpy.sum(R{template_weight} * signal)*R{template_weight*template}/numpy.sum(template_weight))
     #S{_cross_correlate(signal, template_weight*template)} - numpy.sum(numpy.sum(R{template_weight} * signal)*R{template_weight*template}/numpy.sum(template_weight)) # different path here, possibly - break inner numpy.sum out
@@ -105,10 +105,8 @@ def cross_correlate(signal, template, template_weight):
         _cross_correlate(signal_padded**2, template_weight_padded)/numpy.sum(template_weight_padded) -
         (_cross_correlate(signal_padded, template_weight_padded)/numpy.sum(template_weight_padded))**2
     )
-    template_normalized = template_padded - numpy.sum(template_weight_padded*template_padded)/numpy.sum(template_weight_padded)
-    #print 'xx', template_normalized
     #res = tmp / math.sqrt(numpy.sum(template_weight_padded*template_padded**2))
-    res = tmp / math.sqrt(numpy.sum(template_weight_padded*template_normalized**2) /
+    res = tmp / math.sqrt(numpy.sum(template_weight_padded*template_padded**2) /
         numpy.sum(template_weight_padded))
     
     res = res / numpy.sum(template_weight_padded)
@@ -296,7 +294,7 @@ if __name__ == '__main__':
     
     for row in signal:
         for col in row:
-            print '%+0.3f' % (col,),
+            print ('%+0.3f' % (col,)).rjust(6),
         print
     
     print template
@@ -306,7 +304,7 @@ if __name__ == '__main__':
     
     for row in res:
         for col in row:
-            print '%+0.3f' % (col,),
+            print ('%+0.3f' % (col,)).rjust(6),
         print
     
     sys.exit()
